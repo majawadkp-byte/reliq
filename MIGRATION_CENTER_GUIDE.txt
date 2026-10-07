@@ -1,0 +1,75 @@
+RELIQ SOLUTIONS — MIGRATION CENTER (V1.2 WORKING)
+
+WHERE TO FIND IT
+- Admin sidebar → Migration Center
+- Settings → Data & Security → Migration Center
+
+BULK PRODUCT UPLOAD
+The existing Products & Barcodes → Bulk Upload has been expanded to capture:
+- product_name / SKU / barcode
+- category / unit / product_type
+- purchase cost
+- SELLING PRICE (selling_price)
+- opening/current stock
+- minimum + target stock
+- location + supplier
+- tax code + tax-inclusive flag
+- purchase MOQ + order multiple + case pack
+- active / batch tracking / expiry tracking
+
+MIGRATION CENTER MODES
+1. Quick Imports
+   Products, Customers, Suppliers, Customer Receipts, Supplier Payments,
+   Expenses, Stock Adjustments.
+
+2. Historical Imports
+   Sales, Sale Items, Purchases, Purchase Items,
+   Receipt/Payment Allocations, Sales/Purchase Returns + Return Items.
+
+3. Full Business Migration
+   Download the template pack, populate any supported CSV files, put them in
+   one ZIP, then upload the ZIP. RELIQ validates the recognised files, creates
+   a safety database backup, then imports all files in dependency order.
+
+IMPORTANT MIGRATION ACCOUNTING RULE
+- products.csv current_stock is treated as the CURRENT closing stock.
+- customers.csv current_balance is treated as the CURRENT receivable balance.
+- suppliers.csv current_balance is treated as the CURRENT payable balance.
+- Historical sales/purchases are imported for reporting/history and are NOT
+  re-applied to those current balances or current stock. This avoids counting
+  the same history twice.
+
+FULL MIGRATION CSV FILES
+products.csv
+customers.csv
+suppliers.csv
+sales.csv
+sale_items.csv
+purchases.csv
+purchase_items.csv
+customer_receipts.csv
+customer_receipt_allocations.csv
+supplier_payments.csv
+supplier_payment_allocations.csv
+expenses.csv
+sales_returns.csv
+sale_return_items.csv
+purchase_returns.csv
+purchase_return_items.csv
+stock_adjustments.csv
+
+FIELD MAPPING
+Common legacy headings are recognised automatically, including item_code,
+product_id, sell_price, sale_price, retail_price, selling_rate, purchase_rate,
+opening_stock, qty, invoice_number, party_code, vendor_code and method.
+Unknown extra columns are ignored.
+
+SAFETY
+- Full migration automatically creates a SQLite backup first.
+- Preview/validation runs before import.
+- Reconciliation shows record counts, sales/purchase totals, stock quantity,
+  customer receivables, supplier payables and expenses after migration.
+
+RECOMMENDED ORDER FOR MANUAL IMPORTS
+Products → Customers → Suppliers → Sales/Purchases → Items →
+Receipts/Payments → Allocations → Returns → Expenses → Stock reconciliation.

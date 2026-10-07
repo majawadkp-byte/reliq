@@ -1,0 +1,2 @@
+customer_code,customer_name,phone,whatsapp,email,contact,address,credit_allowed,credit_limit,terms_days,current_balance,credit_balance,group_id,active
+C-001,Sample Customer,5550000,5550000,customer@example.com,,Kuwait,yes,500,30,0,0,,yes

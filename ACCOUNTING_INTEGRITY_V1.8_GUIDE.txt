@@ -1,0 +1,46 @@
+RELIQ Solutions V1.8 — Accounting Integrity II
+================================================
+
+This working release adds:
+
+1. Unapplied payment allocation
+   - Customer receipts and supplier payments can retain unused account credit/advance.
+   - The Unapplied Credits workspace shows the remaining amount on the original payment.
+   - Allocate later against open invoices, bills or opening-balance documents.
+   - RELIQ preserves the original payment ID and creates allocation rows instead of duplicating cash movement.
+
+2. Opening balances and account adjustments
+   Customer:
+   - Opening Receivable: customer owes the business.
+   - Opening Credit: business already owes/holds credit for the customer.
+   - Customer Credit Note: reduces receivable; excess becomes customer credit.
+   - Customer Debit Note: increases receivable.
+
+   Supplier:
+   - Opening Payable: business owes supplier.
+   - Opening Advance: supplier holds an advance/credit for the business.
+   - Supplier Debit Note: reduces payable; excess becomes supplier advance.
+   - Supplier Credit Note: increases payable.
+
+3. Aging integration
+   - Open adjustment documents are included with invoices/bills in receivable/payable aging.
+   - Payments can be allocated to adjustment/opening documents as well as normal invoices.
+
+4. Accounting integrity controls
+   - Compares customer/supplier master balances with the total of open invoices/bills + adjustments.
+   - Shows customer credits, supplier advances and unapplied payments.
+   - Authorized users can rebuild party balances from open documents if a historical import/correction causes drift.
+   - Rebuild does not modify account credits/advances.
+
+5. Payment reconciliation
+   - Payments can be marked reconciled against Bank, Cash, Card Clearing or Other.
+   - Optional statement/deposit reference and notes.
+   - Reconciled/unreconciled totals and filters.
+   - Reconciliation changes are written to the audit trail.
+
+6. Permissions
+   - accounting_adjustments: opening balances, credit/debit notes, unapplied allocations and balance rebuild.
+   - reconciliation: payment reconciliation.
+   - Admin and Accountant receive both by default; legacy Manager remains compatible.
+
+Database schema: v21 / RELIQ 1.8.0

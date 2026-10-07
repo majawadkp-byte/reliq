@@ -1,0 +1,14 @@
+RELIQ Solutions V2.0.2 — Build 202
+
+Products & Barcodes — Bulk Editor
+- Multi-select products in desktop table and compact layouts.
+- Select all products matching the current filters (up to 10,000 loaded results).
+- Bulk Activate / Deactivate. Deactivation archives the product and keeps transaction history.
+- Bulk Make Sellable / Not Sellable.
+- Bulk Make Purchasable / Not Purchasable.
+- Bulk Change Category.
+- Bulk Delete / Archive: unused products are permanently deleted; products with stock/history are archived safely.
+- New Product Type, Sales and Purchasing filters in addition to Category and Status.
+- Confirmation before bulk changes and audit/sync records for each affected product.
+
+Database schema remains 23. No database migration is required from V2.0.1.

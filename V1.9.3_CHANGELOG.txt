@@ -1,0 +1,32 @@
+RELIQ Solutions V1.9.3+193
+
+MIGRATION CENTER
+- Fixed historical receipt/payment date validation caused by a global date -> invoice_date alias.
+- Replaced global aliases with entity-specific mappings for products, parties, sales, purchases, payments, returns and stock adjustments.
+- Added row-level validation for required values, dates, numeric values, positive amounts/quantities and duplicate document numbers.
+- Added full-ZIP cross-file reference validation before import.
+- Date parser now accepts ISO dates/timestamps, DD/MM/YYYY, DD-MM-YYYY, dotted dates and Excel serial dates.
+- Full migration remains backup-first and blocks critical validation errors before database writes.
+
+SALES HISTORY
+- Added permission-controlled Profit and Margin columns per invoice.
+- Profit uses the historical cost stored on sale lines, not today's product cost.
+- Posted customer returns reduce both revenue and COGS in invoice profitability.
+- Added filtered-range Net Product Sales, Gross Profit and Gross Margin summary.
+
+PROFIT & LOSS
+- Added Profit & Loss under Reports for users with view_profit permission.
+- Statement shows gross product sales, invoice discounts, sales returns, delivery/other sales charges, net COGS, gross profit, expense categories, net profit/loss and margin percentages.
+- Revenue and operating expenses exclude tax; COGS uses historical sale cost and reverses returned COGS.
+- P&L supports the existing report date and branch filters and PDF/Excel/CSV export flow.
+
+VERSION
+- App 1.9.3+193. Database schema remains 22; no schema migration is required.
+
+Build 194 migration hotfix
+- Return item CSVs are detected independently from return header CSVs.
+- sale_return_items.csv is the canonical sales-return-item filename; legacy sales_return_items.csv is still accepted.
+- Individual imports auto-detect the selected CSV type from filename/header structure, preventing item files from being validated as header files.
+- Full Migration accepts common singular/plural filename variants and can detect supported CSV types by headers.
+- Item/allocation imports now preflight linked parent documents against both the current ZIP and the existing RELIQ database.
+- Sales/purchase/return item files are blocked with a clear parent/header message instead of importing 0 rows and skipping every row.

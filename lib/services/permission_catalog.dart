@@ -1,0 +1,84 @@
+class PermissionCatalog {
+  PermissionCatalog._();
+
+  static const roles = <String>[
+    'Admin',
+    'Accountant',
+    'Cashier',
+    'Storekeeper',
+    'Viewer',
+  ];
+
+  static const labels = <String, String>{
+    'dashboard': 'Morning Brief',
+    'sales': 'Sales / POS',
+    'products': 'Products',
+    'stock_adjust': 'Stock Adjustment',
+    'stock_transfer': 'Stock Transfers',
+    'purchases': 'Purchases & Purchase Orders',
+    'purchase_history': 'Purchase History',
+    'smart_buying': 'Smart Buying',
+    'inventory_intelligence': 'Inventory Intelligence',
+    'sales_history': 'Sales History',
+    'payments': 'Payments & Ledgers',
+    'accounting_adjustments': 'Opening Balances / Credit & Debit Notes / Unapplied Allocations',
+    'reconciliation': 'Cash / Bank Payment Reconciliation',
+    'returns': 'Returns',
+    'expenses': 'Expenses',
+    'day_book': 'Day Book',
+    'reports': 'Reports',
+    'report_export': 'Export Reports',
+    'view_profit': 'View Cost / Profit / Margin',
+    'edit_prices': 'Override Selling Prices / Discounts',
+    'edit_posted_transactions': 'Edit Posted Transactions',
+    'void_transactions': 'Void Posted Sales / Purchases',
+    'delete_products': 'Delete / Archive Products',
+    'audit_trail': 'View Audit Trail',
+    'users': 'Users, Roles & Branches',
+    'settings': 'Business Settings',
+    'migration': 'Migration Center / Data Import',
+    'backup_restore': 'Backup & Restore',
+  };
+
+  static const defaults = <String, Set<String>>{
+    'Admin': {
+      'dashboard','sales','products','stock_adjust','stock_transfer','purchases','purchase_history',
+      'smart_buying','inventory_intelligence','sales_history','payments','accounting_adjustments','reconciliation','returns','expenses','day_book',
+      'reports','report_export','view_profit','edit_prices','edit_posted_transactions','void_transactions',
+      'delete_products','audit_trail','users','settings','migration','backup_restore',
+    },
+    'Accountant': {
+      'dashboard','purchase_history','sales_history','payments','accounting_adjustments','reconciliation','returns','expenses','day_book','reports',
+      'report_export','view_profit','audit_trail',
+    },
+    'Cashier': {
+      'dashboard','sales','sales_history','payments','returns','day_book',
+    },
+    'Storekeeper': {
+      'dashboard','products','stock_adjust','stock_transfer','purchases','purchase_history','smart_buying',
+      'inventory_intelligence','reports',
+    },
+    'Viewer': {
+      'dashboard','purchase_history','inventory_intelligence','sales_history','returns','day_book','reports',
+    },
+    // Backward-compatible legacy roles from earlier RELIQ releases.
+    'Manager': {
+      'dashboard','sales','products','stock_adjust','stock_transfer','purchases','purchase_history',
+      'smart_buying','inventory_intelligence','sales_history','payments','accounting_adjustments','reconciliation','returns','expenses','day_book',
+      'reports','report_export','view_profit','edit_prices','edit_posted_transactions','void_transactions',
+      'delete_products','audit_trail','users','settings','migration','backup_restore',
+    },
+    'Inventory': {
+      'dashboard','products','stock_adjust','stock_transfer','purchases','purchase_history','smart_buying',
+      'inventory_intelligence','reports',
+    },
+  };
+
+  static Set<String> permissionsForRole(String role) => defaults[role] ?? const <String>{};
+
+  static String normalizedRole(String role) => switch (role) {
+    'Manager' => 'Admin',
+    'Inventory' => 'Storekeeper',
+    _ => role,
+  };
+}

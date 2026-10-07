@@ -1,0 +1,2 @@
+return_no,product_code,product_name,quantity,unit_cost,discount,tax,line_total
+PR-001,P-1001,Sample Product,1,1.25,0,0,1.25

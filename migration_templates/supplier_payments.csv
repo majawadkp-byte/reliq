@@ -1,0 +1,2 @@
+payment_no,date,supplier_code,amount,payment_method,reference,notes
+PAY-001,2025-12-20,SUP-001,12.5,Bank,,

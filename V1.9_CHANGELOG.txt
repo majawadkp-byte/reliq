@@ -1,0 +1,17 @@
+RELIQ Solutions V1.9.0+190 - Working Update Engine
+===================================================
+- Added Settings -> System & Updates.
+- Added Help -> Check for Updates.
+- Added online manifest-based update checks (optional; offline failures are silent).
+- Added fully offline .reliq update-package installation.
+- Added per-platform payload verification with SHA-256.
+- Added database/application compatibility checks and downgrade blocking.
+- Added automatic verified database backup before every staged update.
+- Added external Windows PowerShell in-place updater.
+- Added external macOS app-bundle updater with administrator prompt when required.
+- Added previous-application backup before replacement.
+- Added automatic application + database rollback when a new version cannot open/migrate the database.
+- Added update_history table and update activity display.
+- Database schema bumped from 21 to 22.
+- Added GitHub Actions offline-update artifact generation.
+- Added tools/create_update_package.py for future offline releases.

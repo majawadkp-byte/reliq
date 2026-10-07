@@ -1,0 +1,38 @@
+name: reliq_solutions
+publish_to: 'none'
+version: 2.3.1+2301
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+dependencies:
+  archive: ^3.6.1
+  flutter:
+    sdk: flutter
+  sqflite_common_ffi: ^2.3.4
+  path: ^1.9.0
+  path_provider: ^2.1.5
+  file_picker: ^8.1.7
+  excel: ^4.0.6
+  intl: ^0.20.2
+  crypto: ^3.0.6
+  cryptography: ^2.7.0
+  http: ^1.2.2
+  device_info_plus: ^11.2.0
+  shared_preferences: ^2.3.5
+  pdf: ^3.11.1
+  printing: ^5.13.4
+  window_manager: ^0.5.2
+dev_dependencies:
+  flutter_lints: ^6.0.0
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/branding/reliq_logo.png
+    - assets/branding/reliq_icon.png
+    - assets/branding/reliq_logo_white.png
+    - assets/branding/reliq_background_dark.jpg
+    - assets/branding/reliq_background_light.png
+    - assets/branding/login_wallpaper.jpg
+    - assets/branding/reliq_logo_master.svg
+    - assets/branding/login_pos.png
+    - assets/branding/login_inventory.png
+    - assets/branding/login_intelligence.png

@@ -1,0 +1,55 @@
+RELIQ Solutions V1.9 - Update Engine
+=====================================
+
+PURPOSE
+-------
+RELIQ can now update the desktop application without replacing the customer database.
+The live SQLite database remains in the OS application-support folder, separate from the program files.
+
+OFFLINE UPDATE (NO INTERNET REQUIRED)
+-------------------------------------
+1. Obtain a RELIQ_Update_x.y.z.reliq package on USB, local network, email download, etc.
+2. Open RELIQ -> Settings -> System & Updates.
+3. Click "Install update package" and choose the .reliq file.
+4. RELIQ validates the product/version/platform and SHA-256 payload hash.
+5. RELIQ creates a verified pre-update SQLite backup using VACUUM INTO.
+6. Confirm "Restart & install".
+7. A small external updater waits for RELIQ to close, replaces only application files, and reopens RELIQ.
+8. On first launch, SQLite schema migrations run automatically.
+9. If database startup fails after the update, RELIQ restores the pre-update database backup and retries startup.
+
+WINDOWS
+-------
+The .reliq package carries RELIQ_Solutions_Windows.zip. The external PowerShell updater replaces the files in the installed application directory and restarts the executable. Customer data is not stored there.
+
+macOS
+-----
+The .reliq package carries RELIQ_Solutions_macOS_App.tgz. The external updater replaces the .app bundle after RELIQ exits. If installed under /Applications, macOS can request administrator approval. Customer data in Application Support is not replaced.
+
+ONLINE UPDATE
+-------------
+Settings -> System & Updates can also check a hosted JSON manifest. The manifest supplies the latest version, release notes, package URL and full-package SHA-256. Internet is only required for checking/downloading; RELIQ itself remains local/offline capable.
+
+DATABASE SAFETY
+---------------
+Application version: 1.9.0+190
+Database schema: 22
+V1.9 adds update_history. Database upgrades use SQLite's schema version and are applied by AppDatabase.onUpgrade. Downgrades to a package targeting an older database version are blocked.
+
+CREATING AN OFFLINE PACKAGE
+---------------------------
+After producing the Windows release ZIP and macOS app TGZ:
+
+python tools/create_update_package.py \
+  --version 1.9.0 \
+  --build 190 \
+  --db-min 21 \
+  --db-target 22 \
+  --windows dist/RELIQ_Solutions_Windows.zip \
+  --macos dist/RELIQ_Solutions_macOS_App.tgz \
+  --notes "RELIQ V1.9 update engine" \
+  --output dist/RELIQ_Update_1.9.0.reliq
+
+SECURITY NOTE
+-------------
+V1.9 validates package identity, version/database compatibility, ZIP integrity, and SHA-256 payload hashes. For public internet distribution, code-signing/notarization and cryptographic release signing should be added before enabling unattended automatic updates for customers.

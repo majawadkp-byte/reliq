@@ -1,0 +1,2 @@
+product_code,sku,barcode,product_name,category,unit,product_type,purchase_price,selling_price,current_stock,minimum_stock,target_stock,location,supplier,tax_code,tax_inclusive,purchase_moq,order_multiple,case_pack,sellable,purchasable,lifecycle_status,replacement_product_code,demand_family,inherit_predecessor_history,active,track_batch,track_expiry
+P-1001,SKU-1001,629000000001,Sample Product,General,pcs,Stocked,1.250,2.000,25,5,20,A1,Sample Supplier,NONE,no,1,1,1,yes,yes,Active,,,yes,yes,no,no

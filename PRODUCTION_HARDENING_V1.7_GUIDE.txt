@@ -1,0 +1,59 @@
+RELIQ Solutions V1.7 — Production Hardening Phase 1
+====================================================
+
+BASELINE
+--------
+V1.7 is built directly on RELIQ V1.6 Product Lifecycle & Forecast Continuity.
+All V1.6 forecasting, product lifecycle, migration, printing, shortcut and help functionality is retained.
+
+WHAT V1.7 ADDS
+--------------
+1. Role presets
+   - Owner (built-in, unrestricted)
+   - Admin
+   - Accountant
+   - Cashier
+   - Storekeeper
+   - Viewer
+   - Legacy Manager and Inventory roles remain backward-compatible and map to the new permission presets.
+
+2. Sensitive permissions
+   - View cost/profit/margin
+   - Override selling prices
+   - Edit posted transactions
+   - Void posted sales/purchases
+   - Delete/archive products
+   - View Audit Trail
+   - Run Migration Center imports
+   - Backup/restore
+   - User/role/branch administration
+
+3. Audit Trail workspace
+   - Search by user/action/entity/reference/details
+   - Filter by action, entity and date range
+   - Shows actor, timestamp, branch, terminal, entity ID and details
+   - Detail dialog for each event
+
+4. Expanded audit capture
+   - User login
+   - Owner password setup
+   - User create/update
+   - Password reset
+   - Activate/disable/delete user
+   - Branch create/update
+   - Existing operational audits (sales, purchases, payments, stock, product lifecycle, voids, settings, returns, POs, etc.) remain intact.
+
+5. Permission enforcement added to sensitive operations
+   - Product deletion/archive requires Delete/Archive Products permission
+   - Sale/purchase void requires Void Posted Transactions permission
+   - Product master price changes and POS price overrides require Override Selling Prices permission
+   - Migration imports require Migration permission
+   - Manual backup/restore requires Backup & Restore permission
+   - Profit/margin cards in Reports are hidden unless View Cost/Profit/Margin is allowed
+
+IMPORTANT
+---------
+This release strengthens Phase 1 of the production-hardening roadmap.
+The existing V1.6 code already contained audited financial corrections, sale/purchase voiding,
+payment allocation/aging, purchase orders, branch transfers, returns, automatic backups and integrity checks.
+Those are retained and will be hardened further in the next phases rather than rebuilt from scratch.

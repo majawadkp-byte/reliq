@@ -1,0 +1,20 @@
+RELIQ Solutions V2.0.1+201 quick workflow update
+
+Apply this patch over a working RELIQ V2.0.0 source tree.
+
+macOS:
+  unzip -o ~/Downloads/RELIQ_Solutions_V2.0.1_PATCH.zip
+  flutter clean
+  flutter pub get
+  flutter analyze
+  flutter run -d macos
+
+Test:
+1. Sales POS: type customer name, phone or email; select a result; clear returns to Walk-in.
+2. Purchases: type supplier name, phone or email.
+3. Purchase Orders / Smart Buying / Action Center: supplier search.
+4. Sales History: defaults to Today; test Yesterday, This month and Custom From/To.
+5. Purchase History: same date presets.
+6. History search: search a customer/supplier phone number.
+
+Database schema remains 23. No DB migration is required from V2.0.0.

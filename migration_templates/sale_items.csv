@@ -1,0 +1,2 @@
+invoice_no,product_code,product_name,quantity,unit_price,discount,tax,cost_price,line_total
+INV-0001,P-1001,Sample Product,5,2,0,0,1.25,10

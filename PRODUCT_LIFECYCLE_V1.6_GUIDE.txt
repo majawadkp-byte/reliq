@@ -1,0 +1,49 @@
+RELIQ Solutions V1.6 — Product Lifecycle, Product Types & Forecast Continuity
+
+NEW PRODUCT TYPES
+- Stocked Product: quantity tracked; included in stock valuation, stock alerts, reorder logic and demand-stock forecasting.
+- Non-stocked Product: physical item that can be sold/purchased but does not maintain on-hand quantity.
+- Service: no stock movement; can be sold and/or purchased; excluded from inventory forecasting.
+- Recipe / Combo: sellable parent item whose availability/consumption is based on configured Stocked components.
+
+SELLABLE / PURCHASABLE
+- Sellable controls whether an active product is available in Sales POS.
+- Purchasable controls whether an active product is available in Purchase Entry.
+- These controls are independent of product type.
+
+PRODUCT LIFECYCLE
+- Active: normal operational product.
+- Discontinued: retained for history but removed from normal operational lists.
+- Replaced: retained for history and linked to a replacement product.
+- Archived: retained for historical integrity and hidden from normal operations.
+
+SAFE DELETE
+- Products with no stock and no transaction/reference history can be permanently deleted.
+- Products with stock, sales, purchases, returns, stock movement, PO, transfer, stock-count or recipe history are archived instead of hard-deleted.
+
+REPLACEMENT / DEMAND FAMILY
+- A discontinued product can point to its replacement.
+- Demand Family is an optional equivalent-product grouping, e.g. "13mm Cordless Drill".
+- Forecasting does not blindly combine active substitutes.
+
+FORECAST MODEL ADJUSTMENT
+- Replacement products can inherit predecessor history for cold-start forecasting.
+- Predecessor contribution automatically reduces as the new product gets its own transactions:
+  <5 own transactions: 85% predecessor weight
+  <15: 60%
+  <30: 35%
+  30+: 15%
+- When there is no explicit predecessor and own history is sparse, discontinued members of the same Demand Family can provide a low-weight support signal.
+- Last-year seasonality, weekday effects, trend, intermittent-demand handling, variability, ridge regression and lead-time safety stock remain part of the ensemble.
+- MOQ, order multiple and case pack are never changed by the model.
+
+SEARCHABLE SELECTORS
+- Recipe / Combo component selection now supports typing product name, SKU or barcode.
+- The same searchable selector is used in the purchase-line recipe/component editor.
+- Product replacement selection is searchable.
+- Customer/Supplier selection in unlinked returns is searchable.
+- Stock Adjustment and purchase/sales product lookup remain searchable.
+
+IMPORT / MIGRATION
+- Product bulk import supports Service and Non-stocked types plus sellable, purchasable, lifecycle status, demand family and history-inheritance fields.
+- Full Migration product CSV supports the same lifecycle/product-type fields.

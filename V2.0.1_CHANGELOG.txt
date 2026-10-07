@@ -1,0 +1,17 @@
+RELIQ Solutions V2.0.1+201
+
+QUICK WORKFLOW IMPROVEMENTS
+- Customer selector in Sales POS is now type-to-search instead of a long dropdown.
+- Customer search matches name, phone and email and shows outstanding balance in results.
+- Supplier selector in Purchases is now type-to-search by name, phone or email.
+- Purchase Order supplier selection uses the same searchable control.
+- Smart Buying and Action Center supplier selection are searchable as well.
+- Existing searchable customer/supplier selectors in Returns and Accounting Adjustments remain compatible.
+- Sales History opens on Today by default with Today, Yesterday, This month and Custom date controls.
+- Purchase History uses the same date presets.
+- Custom range exposes explicit From and To date buttons.
+- Sales History text search now also matches customer phone/email.
+- Purchase History text search now also matches supplier phone/email.
+
+DATABASE
+- Database schema remains 23. No database migration is required from V2.0.0.

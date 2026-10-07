@@ -1,0 +1,2 @@
+supplier_code,supplier_name,phone,whatsapp,email,contact,address,lead_days,terms_days,current_balance,credit_balance,minimum_order_value,active
+SUP-001,Sample Supplier,5551111,5551111,supplier@example.com,,Kuwait,7,30,0,0,0,yes

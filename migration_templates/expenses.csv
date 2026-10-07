@@ -1,0 +1,2 @@
+expense_no,date,category,description,amount,tax_amount,tax_code,payment_method,reference,notes
+EXP-001,2026-01-02,Utilities,Electricity,25,0,NONE,Cash,,

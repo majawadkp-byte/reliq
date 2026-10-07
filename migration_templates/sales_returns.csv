@@ -1,0 +1,2 @@
+return_no,date,invoice_no,customer_code,total,refund_amount,refund_method,notes
+SR-001,2026-01-03,INV-0001,C-001,2,2,Cash,

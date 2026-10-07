@@ -1,0 +1,2 @@
+return_no,date,purchase_no,supplier_code,total,refund_amount,refund_method,notes
+PR-001,2026-01-04,PUR-0001,SUP-001,1.25,0,Supplier Credit,

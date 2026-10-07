@@ -1,0 +1,39 @@
+RELIQ Solutions V2.0.0+200
+Reliable Intelligent Solutions
+
+PERFORMANCE / BUSINESS INTELLIGENCE
+- Added persistent analytics snapshots for Inventory Intelligence and Business Action Center.
+- Cached analytics load immediately when available; stale snapshots refresh in the background.
+- App warms the 30-day analytics snapshot shortly after startup without blocking login/startup.
+- Relevant sales, purchasing, stock, product, payment and expense writes automatically mark analytics stale via SQLite triggers.
+- Manual Refresh buttons force a fresh calculation.
+- Added loading guidance for first-time analytics calculations on large databases.
+- Added query indexes for sale/purchase/return item joins used by analytics.
+- Morning Brief now consumes the same cached Inventory Intelligence calculation, reducing repeated heavy work and keeping stock indicators consistent.
+
+MIGRATION CENTER / CSV RELIABILITY
+- Individual CSV imports now use the migration section selected by the user and never silently reclassify item files as header files.
+- Full Migration uses canonical/accepted filenames first, then content detection only as a fallback.
+- Fixed Sales Return Items vs Sales Returns and Purchase Return Items vs Purchase Returns classification.
+- Added additional aliases for sale/purchase/return document numbers and returned quantity fields.
+- Added UTF-8 BOM, UTF-16 LE/BE and Latin-1 decoding support for CSV exports.
+- Added comma, semicolon and tab delimiter detection.
+- Duplicate/alias columns now prefer the populated value instead of keeping an earlier blank value.
+- Date validation accepts ISO, day-first numeric dates, unambiguous month-first numeric dates, timestamps and Excel serial dates.
+- Migration Center shows a reading/validation status while large CSV/ZIP files are being processed.
+
+REPORTING
+- Retains V1.9.3 admin/permission-controlled Sales History profit and gross margin columns and range totals.
+- Retains Profit & Loss report using historical sale-item cost, returns and operating expenses.
+
+BRANDING / UI
+- Version is now V2.0.
+- Tagline changed to: Reliable Intelligent Solutions.
+- Replaced RELIQ branding assets with the supplied borderless icon/logo.
+- Removed white framing around the RELIQ icon in sidebar, login and Morning Brief branding.
+- Updated macOS and Windows release icon assets.
+
+DATABASE
+- Schema target: 23.
+- Adds analytics_snapshots plus analytics invalidation triggers and performance indexes.
+- Existing business data remains in place; schema upgrade creates cache infrastructure only.

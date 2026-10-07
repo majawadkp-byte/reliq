@@ -1,0 +1,24 @@
+RELIQ Solutions V1.4 Working — Printing & Settings Phase 3
+
+PRINTING BEHAVIOR
+- Sales invoice / POS receipt, customer cash receipt, purchase invoice/goods receipt, and supplier payment voucher now have independent post-save behavior.
+- Options: None, Preview, Print directly.
+- Direct printing uses the selected OS printer, or the system default when no explicit printer is selected.
+- Sales with no automatic print action show Preview / Print Directly / New Sale after completion.
+- Customer receipts and supplier payment vouchers remain manually printable when their automatic action is None.
+- Purchase documents can preview/direct-print independently of sales.
+
+SETTINGS REDESIGN
+- Printing & Documents is a dedicated section.
+- Keyboard helper controls moved to Keyboard & Productivity.
+- Settings content is constrained to a readable desktop width and printer controls are responsive.
+- Printer list can be refreshed from Settings.
+
+DOCUMENT SETTINGS
+- Sales paper format: Thermal 58mm, Thermal 80mm, A4.
+- Purchase paper format: Thermal 58mm, Thermal 80mm, A4.
+- Barcode label options remain available in Printing & Documents.
+
+IMPORTANT
+- Printers must first be installed/configured in Windows or macOS. RELIQ does not install printer drivers.
+- Preview creates a PDF and opens it for review; direct printing bypasses the preview.

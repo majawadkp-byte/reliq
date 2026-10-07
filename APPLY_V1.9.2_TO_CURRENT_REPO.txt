@@ -1,0 +1,32 @@
+RELIQ V1.9.2+192 — APPLY TO THE CURRENT TESTED REPOSITORY
+==========================================================
+
+This package was prepared from the latest V1.9.1 build-fix source stored in the project.
+Your local repository already contains the macOS runner you generated later, so DO NOT replace/delete that runner.
+
+After copying/overlaying these V1.9.2 files onto the current repository:
+
+1. Patch the existing macOS runner file permissions entitlement:
+   ./tools/patch_macos_entitlements.sh
+
+2. Refresh dependencies:
+   flutter pub get
+
+3. Test locally:
+   flutter run -d macos
+
+4. Verify these flows before release:
+   - Migration Center > Template Pack
+   - Migration Center > Quick Imports > Template
+   - Migration Center > Quick Imports > Import CSV
+   - Migration Center > Full Migration > Start Full Business Migration (choose ZIP)
+   - Products & Barcodes > Template
+   - Products & Barcodes > Bulk Import
+   - Settings > Upload / replace logo
+   - App opens maximized
+
+5. Release test:
+   flutter build macos --release
+
+GitHub Actions also patches the macOS entitlement automatically when it creates/builds the runner.
+Database schema remains v22.

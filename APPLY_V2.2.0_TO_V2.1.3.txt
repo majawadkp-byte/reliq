@@ -1,0 +1,38 @@
+RELIQ Solutions V2.2.0 Visual System
+Baseline: V2.1.3 full source
+
+This package is already a complete source tree. No manual patching is required.
+
+Database: no schema migration is introduced by V2.2.0. Existing V2.1.3 data/database files remain compatible.
+
+Key files changed:
+- pubspec.yaml
+- lib/config/brand.dart
+- lib/main.dart
+- lib/screens/login_screen.dart
+- lib/screens/app_shell.dart
+- lib/screens/dashboard_screen.dart
+- lib/screens/returns_screen.dart
+- lib/screens/settings_screen.dart
+- lib/screens/sales_pos_screen.dart
+- lib/screens/products_screen.dart
+- lib/screens/stock_adjustment_screen.dart
+- lib/screens/sales_history_screen.dart
+- lib/screens/purchase_history_screen.dart
+- lib/screens/payments_ledgers_screen.dart
+- lib/screens/expenses_screen.dart
+- lib/screens/team_locations_screen.dart
+- lib/ui/v3_style.dart
+- lib/ui/v4_components.dart
+- lib/ui/pagination_bar.dart
+- lib/ui/reliq_surface.dart (new)
+- assets/branding/reliq_background_dark.jpg (new)
+- assets/branding/reliq_background_light.jpg (new)
+- assets/branding/reliq_logo_white.png (new)
+
+Recommended verification after extracting:
+1. flutter pub get
+2. flutter analyze
+3. flutter run -d macos  (or windows)
+4. Check login at wide and narrow window widths in Light and Dark modes.
+5. Check dropdowns, date/filter fields, dialogs, returns, Settings, POS and tables in both themes.

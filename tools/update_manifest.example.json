@@ -1,0 +1,11 @@
+{
+  "product": "RELIQ Solutions",
+  "channel": "stable",
+  "version": "2.1.2",
+  "build": 212,
+  "minimum_database_version": 21,
+  "target_database_version": 29,
+  "release_notes": "Example release notes. Replace this file with the manifest hosted at your update URL.",
+  "package_url": "https://your-update-server.example/RELIQ_Update_2.1.2.reliq",
+  "package_sha256": "REPLACE_WITH_SHA256"
+}

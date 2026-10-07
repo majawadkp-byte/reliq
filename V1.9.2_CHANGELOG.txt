@@ -1,0 +1,22 @@
+RELIQ Solutions V1.9.2+192
+=============================
+
+Brand
+- Applied the supplied RELIQ icon and RELIQ Solutions logo.
+- Updated application icons for macOS and Windows.
+- Updated core palette to dark #1C2D30 and signature lime #E1FF05.
+- Refreshed login and Morning Brief presentation.
+
+Desktop
+- RELIQ opens maximized on desktop through window_manager.
+
+Migration / bulk import
+- Fixed macOS user-selected file entitlement in local and GitHub release builds.
+- CSV/ZIP/XLSX selection reads the selected desktop file path directly.
+- Save dialogs use FileType.any and enforce the correct extension in RELIQ.
+- Template save falls back to Downloads if the native save panel throws.
+- Product template is now named RELIQ_Product_Import_Template.csv.
+
+Release
+- App 1.9.2+192, database schema 22.
+- Offline updater metadata updated to 1.9.2 / build 192.

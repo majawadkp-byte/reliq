@@ -1,0 +1,38 @@
+RELIQ Solutions V1.5 — Adaptive Demand Forecasting
+
+MODEL INPUTS
+- Recent 7, 14, 30 and 90-day demand
+- Previous comparison periods and recent momentum
+- Weekday demand pattern
+- Demand variability / safety stock
+- Intermittent-demand pattern (Croston-style rate)
+- Lightweight ridge regression with trend + weekly + annual seasonal features
+- Equivalent future period from last year when sufficient history exists
+- Current-vs-last-year growth adjustment
+- Supplier lead time
+- Current stock and incoming purchase-order stock
+- Target coverage days from Settings
+
+OUTPUTS
+- 7 / 30 / 60 / 90-day demand forecasts
+- Forecast confidence score
+- Safety stock
+- Automatic minimum stock / reorder point
+- Automatic target stock
+- Recommended reorder date
+- Expected stockout date
+- Suggested purchase quantity
+
+AUTOMATIC STOCK LEVELS
+Settings → Inventory includes:
+1. Auto-fill Minimum Stock & Target Stock from demand forecast
+2. Use last-year seasonality when available
+3. Default target stock coverage (days)
+
+Auto-fill only writes Min Stock and Target Stock when forecast confidence is Medium or High. Products with limited history retain their configured values.
+
+MOQ
+Forecasting does not change MOQ, order multiple or case pack. Existing purchasing constraints are applied after demand forecasting to round the recommended purchase quantity.
+
+SEASONALITY
+When approximately a year of history exists, RELIQ compares the equivalent period from last year with recent demand and blends it into the forecast. This is intended to capture recurring seasonal peaks/dips without letting last year's pattern override current trading conditions.

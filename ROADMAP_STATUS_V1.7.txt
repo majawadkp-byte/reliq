@@ -1,0 +1,73 @@
+RELIQ Production Roadmap Status after V1.7
+==========================================
+
+DONE / ALREADY PRESENT
+----------------------
+✓ Product lifecycle + safe delete/archive
+✓ Replacement product demand continuity
+✓ Adaptive demand forecasting + seasonality
+✓ CSV Migration Center
+✓ Payment allocation and partial allocation
+✓ Receivables/payables aging
+✓ Posted sale/purchase financial correction
+✓ Audited sale/purchase void workflow
+✓ Purchase Orders
+✓ Branch stock + send/receive transfer workflow
+✓ Sales and purchase returns linked to original documents
+✓ Automatic local backups + restore safety copy
+✓ SQLite integrity check
+✓ Native print policies by document type
+✓ Keyboard productivity layer + Help Center
+✓ Role presets + fine-grained permissions (expanded in V1.7)
+✓ Searchable Audit Trail UI (V1.7)
+
+NEXT HARDENING PHASES
+---------------------
+V1.8 — Accounting Integrity II
+- Unapplied payment management UI
+- Customer/supplier credit note and debit note workflows
+- Cash/bank reconciliation workspace
+- Stronger opening-balance controls and reconciliation reports
+
+V1.9 — Smart Buying → PO Automation
+- Convert recommendations to grouped supplier POs
+- Editable draft before place order
+- Respect MOQ/order multiple/case pack without changing supplier rules
+- Supplier lead-time and price/reliability intelligence
+
+V1.10 — Backup / Database Health
+- Backup status dashboard and verification history
+- Restore wizard improvements
+- Database health/reindex maintenance actions
+- Backup-age warnings and retention visibility
+
+V1.11 — Upgrade / Installer Hardening
+- Database schema migration ledger
+- Release notes and upgrade validation
+- Windows installer package with shortcuts/uninstaller
+- macOS release packaging/signing pathway
+- Upgrade without customer-data loss
+
+V1.12 — Performance / Onboarding / Help Phase 2
+- 100k+ invoice and 10k+ product stress optimizations
+- First-run onboarding wizard
+- Rich help guides/screenshots/troubleshooting
+- Diagnostics/error reporting bundle
+
+V1.8 UPDATE — Accounting Integrity II
+-------------------------------------
+Implemented in V1.8 working build:
+- Unapplied payment allocation workspace.
+- Opening receivables/payables and opening credits/advances.
+- Customer credit/debit notes.
+- Supplier debit/credit notes.
+- Aging includes open adjustment documents.
+- Accounting balance integrity summary and controlled rebuild.
+- Payment reconciliation workspace with bank/cash/card references.
+- Dedicated accounting permissions for adjustment/reconciliation actions.
+
+Still planned after V1.8:
+- Smart Buying → Purchase Order workflow hardening.
+- Backup / restore / database health phase.
+- Production installer + upgrade system.
+- Advanced reporting and forecast-accuracy validation.

@@ -1,0 +1,2 @@
+invoice_no,invoice_date,due_date,customer_code,subtotal,discount,tax,delivery_charge,other_charge,total,paid,balance,payment_method,status,notes
+INV-0001,2026-01-01,,C-001,10,0,0,0,0,10,10,0,Cash,Completed,

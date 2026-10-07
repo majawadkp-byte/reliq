@@ -1,0 +1,2 @@
+purchase_no,product_code,product_name,quantity,unit_cost,discount,tax,line_total,batch_no,expiry_date
+PUR-0001,P-1001,Sample Product,10,1.25,0,0,12.5,,

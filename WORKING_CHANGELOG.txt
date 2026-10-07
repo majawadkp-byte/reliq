@@ -1,0 +1,82 @@
+RELIQ Solutions - Working Update: Keyboard & Help (Phase 1)
+
+Implemented in this step:
+- Ctrl/Cmd + K command palette.
+- Ctrl/Cmd + F universal Product Lookup from the app shell.
+- Ctrl/Cmd + R refresh/recreate current screen.
+- Ctrl/Cmd + , opens Settings.
+- Shift + ? opens Keyboard Shortcuts help.
+- Alt + 1..9 quick navigation for core RELIQ pages.
+- Sidebar shortcut helper badges for pages that have direct navigation shortcuts.
+- Setting to enable/disable shortcut helper badges while leaving shortcuts active.
+- Help menu in the top bar.
+- Help -> Keyboard Shortcuts.
+- Help Center with operating guides for sales, purchases, products/barcodes, receipts/payments, stock adjustments, stock transfers, returns, reports/history, backups/restore.
+- Keyboard Shortcuts PDF included under docs/.
+- GitHub Actions release workflow included for Windows and macOS cloud builds.
+
+Planned for a later step:
+- Connect every contextual F-key to the exact action inside Sales/POS, Purchases, Inventory, Payments/Ledgers and Reports.
+- Connect contextual Ctrl/Cmd + N/S/P to the active form/save/print action screen-by-screen.
+- Add contextual bottom shortcut bars on high-frequency screens if shortcut helpers are enabled.
+
+V1.2 MIGRATION CENTER
+- Added Settings/Data & Security → Migration Center entry and Admin sidebar page.
+- Added separate CSV imports for products, customers, suppliers, receipts, supplier payments, expenses and stock adjustments.
+- Added historical imports for sales/purchases + line items, allocations and returns.
+- Added Full Business Migration from a ZIP containing multiple CSV files.
+- Added validation preview, automatic safety backup before full migration, migration reconciliation dashboard and per-module templates.
+- Added RELIQ Migration Template Pack generator.
+- Current stock/current party balances are treated as closing values so historical invoices are not double-counted.
+- Expanded Bulk Product Upload to capture selling_price plus location, supplier, tax, MOQ, order multiple and case pack.
+
+V1.3 Working - Shortcut Phase 2
+- Wired contextual desktop shortcuts into Sales / POS, Receive Purchase, Products, Stock Adjustment, Customers and Suppliers.
+- POS: F2 search, F4 customer, F5 refresh, F6 discount, F7 charges, F8 hold, F9 payment, F10 complete, Ctrl/Cmd+N new sale, Ctrl/Cmd+S complete/save.
+- Purchases: F2 supplier, F3 product search, F7 freight, F9 payment, F10 receive, Ctrl/Cmd+N new purchase, Ctrl/Cmd+S save.
+- Products: Ctrl/Cmd+F / F2 search, Ctrl/Cmd+N new product, F5 refresh.
+- Stock Adjustment: Ctrl/Cmd+F / F2 search, F4 adjust, F5 refresh.
+- Customers/Suppliers: Ctrl/Cmd+F search and Ctrl/Cmd+N new record.
+- Navigation standardized: Alt+1 Morning Brief, Alt+2 Sales, Alt+3 Purchases, Alt+4 Products, Alt+5 Customer Ledgers, Alt+6 Supplier Ledgers, Alt+7 Payment Activity, Alt+8 Reports, Alt+9 Action Center.
+- Added contextual shortcut helper bars; existing Settings toggle hides/shows helper labels without disabling shortcuts.
+- Updated Help > Keyboard Shortcuts to show the active bindings in this release.
+
+
+V1.4 Working — Printing & Settings Phase 3
+- Independent print policies for sales invoices, customer receipts, purchase documents and supplier payment vouchers.
+- Preview vs direct print vs no automatic output.
+- OS printer discovery and per-document printer selection.
+- Sale completion offers Preview / Print Directly when automatic output is disabled.
+- Settings reorganized with Printing & Documents and Keyboard & Productivity sections.
+- Help Center printing guide added.
+
+
+V1.5 Working — Adaptive Demand Forecasting
+- Added 7/30/60/90-day product demand forecasts.
+- Added lightweight ridge-regression component using trend, weekly seasonality and annual seasonal signals.
+- Added recent 7/30/90-day velocity ensemble and intermittent-demand (Croston-style) component.
+- Uses equivalent period from last year when enough history exists, with current-vs-last-year growth adjustment.
+- Added demand variability, safety stock, lead-time demand, reorder point, expected stockout date and recommended reorder date.
+- Auto-fills Min Stock and Target Stock only for Medium/High confidence forecasts when enabled in Settings.
+- MOQ, order multiple and case pack are never modified; they only constrain final suggested order quantity.
+- Inventory Intelligence now explains forecast model, confidence score, seasonality, forecast horizons and calculated stock levels.
+
+V1.6 WORKING — PRODUCT LIFECYCLE & FORECAST CONTINUITY
+- Added Stocked / Non-stocked / Service / Recipe / Combo product types.
+- Added Sellable / Purchasable controls.
+- Added Active / Discontinued / Replaced / Archived lifecycle states.
+- Added safe Delete: unused products hard-delete; used products archive.
+- Added replacement product linkage and Demand Family field.
+- Added predecessor-history transfer and low-weight discontinued-family support to demand forecasting.
+- Excluded Service / Non-stocked products from stock movement, inventory forecasting and stock valuation.
+- Added searchable component/replacement/return-party selectors.
+- Expanded bulk product import and migration fields.
+
+V1.8 — Accounting Integrity II
+- Unapplied customer/supplier account-payment allocation.
+- Opening receivable/payable and opening credit/advance documents.
+- Customer credit/debit notes and supplier debit/credit notes.
+- Open adjustment documents participate in aging and payment allocation.
+- Accounting integrity comparison + controlled party-balance rebuild.
+- Payment reconciliation for Bank, Cash, Card Clearing and Other references.
+- New accounting_adjustments and reconciliation permissions.

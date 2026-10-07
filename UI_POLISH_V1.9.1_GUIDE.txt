@@ -1,0 +1,21 @@
+RELIQ Solutions V1.9.1+191 — Settings & Navigation Polish
+
+SETTINGS LAYOUT
+- Settings content is anchored to the top-left instead of visually centering in the available body.
+- Switching settings sections always returns the content area to the top.
+- Desktop settings rail uses a consistent fixed width and full-height alignment.
+- Compact layouts stack the Settings header actions cleanly instead of forcing them into one row.
+- Business Profile now begins with the same section-title structure as every other settings section.
+
+MAIN SIDEBAR
+- Reorganized around business workflows rather than a long flat list.
+- Morning Brief and Business Action Center remain immediately visible.
+- Collapsible groups: Sales, Inventory, Purchasing, Finance & Reports, Administration.
+- Settings remains permanently available at the bottom of the sidebar.
+- Audit Trail and Sync Center are now discoverable from Administration.
+- The active group opens automatically when navigation comes from shortcuts, dashboards, command palette, or deep links.
+- Collapsed icon-only sidebar still exposes every permitted destination.
+
+NO DATABASE CHANGE
+- Database schema remains v22.
+- No customer data migration is required from V1.9.0.

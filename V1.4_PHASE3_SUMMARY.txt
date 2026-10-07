@@ -1,0 +1,28 @@
+RELIQ Solutions V1.4 Working — Phase 3
+
+PRINTING
+- Separate post-save print policy for:
+  1. Sales invoice / POS receipt
+  2. Customer cash receipt
+  3. Purchase invoice / goods receipt
+  4. Supplier payment voucher
+- Per document: None / Preview / Print directly.
+- Per document printer selection; blank means OS system default.
+- Printer list can be refreshed from Settings.
+- Direct printing uses the Flutter printing desktop backend.
+- Sales with automatic output disabled show Preview, Print Directly, or New Sale after saving.
+- Customer receipts and supplier payments remain manually printable when automatic output is None.
+- Purchase printing is independent from sales printing.
+
+SETTINGS
+- New Printing & Documents section.
+- New Keyboard & Productivity section.
+- Shortcut helper setting moved out of POS defaults.
+- Desktop settings content constrained to a consistent readable width.
+- Responsive printing-policy cards for narrower windows.
+
+HELP
+- Added Printing & document behavior help topic.
+
+VERSION
+- V1.4 Working / 1.4.0+140

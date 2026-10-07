@@ -1,0 +1,30 @@
+RELIQ Solutions V2.1.1 Build 211 — Reports Performance Patch
+============================================================
+Base release: V2.1.0 Build 210
+Database: schema 27 -> 28 (reporting indexes only)
+
+Before applying
+---------------
+1. Back up the customer database.
+2. Close RELIQ.
+
+Apply patch
+-----------
+From the root of your V2.1.0 Flutter source:
+
+  unzip -o ~/Downloads/RELIQ_Solutions_V2.1.1_PATCH.zip
+  flutter clean
+  flutter pub get
+  flutter analyze
+  flutter run -d macos
+
+What changes
+------------
+- Trend charts aggregate each transaction table once per selected period instead of repeating subqueries for every day.
+- Reports cache summary/detail/chart futures while the screen is open.
+- Switching Overview/Sales/Purchases/Expenses reuses the same loaded trend data.
+- Long-running report/chart/detail queries show explicit working/loading states instead of temporary “no data” messages.
+- Branch comparison loads branches concurrently.
+- Schema 28 adds branch/date indexes for return reporting.
+
+The manual Refresh button invalidates the report cache and reloads the current period.

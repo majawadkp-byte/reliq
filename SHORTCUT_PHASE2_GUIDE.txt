@@ -1,0 +1,61 @@
+RELIQ Solutions V1.3 Working - Shortcut Phase 2
+
+ACTIVE CONTEXTUAL SHORTCUTS
+
+Global
+- Ctrl/Cmd + K: Command Palette
+- Ctrl/Cmd + R: Refresh current page
+- Ctrl/Cmd + ,: Settings
+- Shift + ?: Keyboard Shortcuts
+
+Navigation
+- Alt + 1: Morning Brief
+- Alt + 2: Sales / POS
+- Alt + 3: Receive Purchase
+- Alt + 4: Products & Barcodes
+- Alt + 5: Customer Ledgers
+- Alt + 6: Supplier Ledgers
+- Alt + 7: Payment Activity
+- Alt + 8: Reports
+- Alt + 9: Business Action Center
+
+Sales / POS
+- F2 / Ctrl/Cmd+F: Product / barcode search
+- F4: Customer
+- F5: Refresh
+- F6: Bill discount
+- F7: Delivery / charges
+- F8: Hold sale
+- F9: Payment amount
+- F10 / Ctrl/Cmd+S: Complete sale
+- Ctrl/Cmd+N: New sale (confirmation if current sale has items)
+
+Receive Purchase
+- F2: Supplier
+- F3 / Ctrl/Cmd+F: Product search
+- F7: Freight
+- F9: Payment amount
+- F10 / Ctrl/Cmd+S: Receive purchase
+- Ctrl/Cmd+N: New purchase (confirmation if current purchase has items)
+
+Products
+- F2 / Ctrl/Cmd+F: Search
+- F5: Refresh
+- Ctrl/Cmd+N: Add product
+
+Stock Adjustment
+- F2 / Ctrl/Cmd+F: Search
+- F4: Adjust stock
+- F5: Refresh history
+
+Customers / Suppliers
+- Ctrl/Cmd+F: Search
+- Ctrl/Cmd+N: Add new record
+
+SHORTCUT HELPERS
+Settings > Sales & POS > Show keyboard shortcut helpers
+- ON: shows supported shortcut badges / contextual helper strips.
+- OFF: hides visual hints, while keyboard shortcuts remain active.
+
+NOT YET BOUND
+Keys such as F11 full-screen and F12 contextual printing are intentionally not forced onto screens that do not yet have a safe matching action/state. They can be added in a later phase once the related workflow is defined.
