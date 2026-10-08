@@ -14,6 +14,7 @@ import '../ui/v3_style.dart';
 import '../ui/reliq_surface.dart';
 import 'dashboard_screen.dart';
 import 'action_center_screen.dart';
+import 'about_screen.dart';
 import 'audit_trail_screen.dart';
 import 'day_book_screen.dart';
 import 'expenses_screen.dart';
@@ -122,6 +123,7 @@ class _AppShellState extends State<AppShell> {
     _NavItem('Sync Center', 'Multi-device business sync, queue health, incoming application and conflict diagnostics.', Icons.cloud_sync_outlined, 'settings'),
     _NavItem('Migration Center', 'Import masters, history, payments and balances from CSV exports.', Icons.move_up_outlined, 'migration'),
     _NavItem('Audit Trail', 'Who changed what, when and from which branch or terminal.', Icons.manage_search_outlined, 'audit_trail'),
+    _NavItem('About RELIQ', 'Version, product purpose, support and contact details.', Icons.info_outline, 'about'),
   ];
 
   @override
@@ -189,10 +191,37 @@ class _AppShellState extends State<AppShell> {
 
 
   bool _canAccess(int itemIndex) {
+    if (itemIndex == 25) return true;
     final item = items[itemIndex];
     if (widget.currentUser.isOwner) return true;
     if (item.permission == 'license') return false;
     return widget.currentUser.can(item.permission);
+  }
+
+  String _dedupeUserLabel(String value) {
+    final cleaned = value.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (cleaned.isEmpty) return '';
+    final parts = cleaned
+        .split(RegExp(r'\s*[·•|]\s*'))
+        .map((part) => part.trim())
+        .where((part) => part.isNotEmpty)
+        .toList();
+    if (parts.length > 1 && parts.every((part) => part.toLowerCase() == parts.first.toLowerCase())) {
+      return parts.first;
+    }
+    return cleaned;
+  }
+
+  String get _currentUserLabel {
+    final name = _dedupeUserLabel(widget.currentUser.displayName);
+    final role = _dedupeUserLabel(widget.currentUser.role);
+    if (widget.currentUser.isOwner) {
+      if (name.isEmpty || name.toLowerCase() == 'owner') return 'Owner';
+      return name;
+    }
+    if (name.isEmpty) return role;
+    if (role.isEmpty || name.toLowerCase() == role.toLowerCase()) return name;
+    return '$name · $role';
   }
 
   ThemeData _touchTheme(ThemeData base) {
@@ -320,6 +349,12 @@ class _AppShellState extends State<AppShell> {
         return const MigrationCenterScreen();
       case 24:
         return const AuditTrailScreen();
+      case 25:
+        return AboutScreen(
+          onOpenHelp: () => ReliqHelp.showHelpCenter(context),
+          onOpenShortcuts: () => ReliqHelp.showKeyboardShortcuts(context),
+          onOpenLicense: () => _select(18),
+        );
       default:
         return const SizedBox.shrink();
     }
@@ -441,7 +476,7 @@ class _AppShellState extends State<AppShell> {
       ('Products & Barcodes', 'Alt+4', Icons.inventory_2_outlined, () => _select(2)),
       ('Customers', 'Alt+5', Icons.people_outline, () => _openPayments(0)),
       ('Suppliers', 'Alt+6', Icons.local_shipping_outlined, () => _openPayments(1)),
-      ('Payments & Ledgers', 'Alt+7', Icons.credit_card_outlined, () => _openPayments(4)),
+      ('Payment Activity', 'Alt+7', Icons.credit_card_outlined, () => _openPayments(4)),
       ('Reports', 'Alt+8', Icons.query_stats_outlined, () => _select(15)),
       ('Business Action Center', 'Alt+9', Icons.bolt_outlined, () => _select(21)),
       ('Inventory Intelligence', '', Icons.auto_graph_outlined, () => _select(8)),
@@ -452,6 +487,7 @@ class _AppShellState extends State<AppShell> {
       ('Universal Lookup', _isMac ? 'Cmd+F' : 'Ctrl+F', Icons.search, _universalLookup),
       ('Help Center', '', Icons.help_outline, () => ReliqHelp.showHelpCenter(context)),
       ('Keyboard Shortcuts', 'Shift+?', Icons.keyboard_alt_outlined, () => ReliqHelp.showKeyboardShortcuts(context)),
+      ('About RELIQ', '', Icons.info_outline, () => _select(25)),
     ];
     String query = '';
     await showDialog<void>(
@@ -585,22 +621,20 @@ class _AppShellState extends State<AppShell> {
             child: ListView(
               padding: EdgeInsets.fromLTRB(collapsed && !mobile ? 9 : 12, 7, collapsed && !mobile ? 9 : 12, 12),
               children: [
+                // Overview stays immediately accessible. The remaining workspaces
+                // are grouped by the business workflow users naturally follow.
                 _navTile(0, mobile: mobile, closeDrawer: closeDrawer),
                 _navTile(21, mobile: mobile, closeDrawer: closeDrawer),
                 const SizedBox(height: 5),
                 ..._navGroup('sales', 'SALES', [1, 9, 10, 12], mobile: mobile, closeDrawer: closeDrawer),
                 ..._navGroup('inventory', 'INVENTORY', [2, 8, 3, 20, 4], mobile: mobile, closeDrawer: closeDrawer),
-                ..._navGroup('purchasing', 'PURCHASING', [5, 6, 19, 7], mobile: mobile, closeDrawer: closeDrawer),
+                ..._navGroup('purchasing', 'PURCHASING', [5, 19, 6, 7], mobile: mobile, closeDrawer: closeDrawer),
                 ..._navGroup('finance', 'FINANCE & REPORTS', [11, 13, 14, 15], mobile: mobile, closeDrawer: closeDrawer),
                 ..._navGroup('admin', 'ADMINISTRATION', [16, 17, 18, 22, 23, 24], mobile: mobile, closeDrawer: closeDrawer),
+                const SizedBox(height: 5),
+                _navTile(25, mobile: mobile, closeDrawer: closeDrawer),
               ],
             ),
-          ),
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.fromLTRB(collapsed && !mobile ? 9 : 12, 7, collapsed && !mobile ? 9 : 12, 7),
-            decoration: const BoxDecoration(border: Border(top: BorderSide(color: Color(0x14FFFFFF)))),
-            child: _navTile(16, mobile: mobile, closeDrawer: closeDrawer),
           ),
           if (!collapsed || mobile)
             Container(
@@ -609,7 +643,7 @@ class _AppShellState extends State<AppShell> {
               decoration: const BoxDecoration(border: Border(top: BorderSide(color: Color(0x14FFFFFF)))),
               child: Row(children: [
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('${widget.currentUser.displayName} · ${widget.currentUser.role}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFD7E4EF), fontSize: 11, fontWeight: FontWeight.w600)),
+                  Text(_currentUserLabel, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFD7E4EF), fontSize: 11, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 4),
                   Text('@${widget.currentUser.username} · local session', style: const TextStyle(color: V3Style.sidebarMuted, fontSize: 10)),
                 ])),
@@ -791,11 +825,14 @@ class _AppShellState extends State<AppShell> {
             if (value == 'shortcuts') { ReliqHelp.showKeyboardShortcuts(context); }
             if (value == 'help') { ReliqHelp.showHelpCenter(context); }
             if (value == 'updates') { _openSettingsSection(10); }
+            if (value == 'about') { _select(25); }
           },
           itemBuilder: (_) => const [
             PopupMenuItem(value: 'help', child: ListTile(dense: true, contentPadding: EdgeInsets.zero, leading: Icon(Icons.help_outline), title: Text('Help Center'))),
             PopupMenuItem(value: 'shortcuts', child: ListTile(dense: true, contentPadding: EdgeInsets.zero, leading: Icon(Icons.keyboard_alt_outlined), title: Text('Keyboard Shortcuts'), subtitle: Text('Shift + ?'))),
             PopupMenuItem(value: 'updates', child: ListTile(dense: true, contentPadding: EdgeInsets.zero, leading: Icon(Icons.system_update_alt_outlined), title: Text('Check for Updates'))),
+            PopupMenuDivider(),
+            PopupMenuItem(value: 'about', child: ListTile(dense: true, contentPadding: EdgeInsets.zero, leading: Icon(Icons.info_outline), title: Text('About RELIQ'))),
           ],
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -817,7 +854,7 @@ class _AppShellState extends State<AppShell> {
         _topAction(widget.darkMode ? Icons.light_mode_outlined : Icons.dark_mode_outlined, widget.darkMode ? 'Light' : 'Dark', widget.onToggleTheme, accent: V3Style.purple),
         if (MediaQuery.sizeOf(context).width >= 1120) ...[
           const SizedBox(width: 12),
-          Text('${widget.currentUser.displayName} · ${widget.currentUser.role}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+          Text(_currentUserLabel, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
           const SizedBox(width: 4),
           IconButton(
             tooltip: 'Logout',

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../data/app_database.dart';
+import '../services/document_share_service.dart';
 import '../services/print_service.dart';
 import '../services/whatsapp_service.dart';
 import '../ui/pagination_bar.dart';
@@ -36,8 +37,12 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
     super.initState();
     _applyDatePreset('Today', notify: false);
     _historyFuture = _load();
-    AppDatabase.instance.canEditTransactions().then((v) { if (mounted) setState(() => canEdit = v); });
-    AppDatabase.instance.currentUserHasPermission('view_profit').then((v) { if (mounted && v != canViewProfit) _reload(() => canViewProfit = v); });
+    AppDatabase.instance.canEditTransactions().then((v) {
+      if (mounted) setState(() => canEdit = v);
+    });
+    AppDatabase.instance.currentUserHasPermission('view_profit').then((v) {
+      if (mounted && v != canViewProfit) _reload(() => canViewProfit = v);
+    });
   }
 
   @override
@@ -70,11 +75,15 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
     _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 280), () {
       if (!mounted) return;
-      _reload(() { query = value.trim(); page = 0; });
+      _reload(() {
+        query = value.trim();
+        page = 0;
+      });
     });
   }
 
-  DateTime _dateOnly(DateTime value) => DateTime(value.year, value.month, value.day);
+  DateTime _dateOnly(DateTime value) =>
+      DateTime(value.year, value.month, value.day);
 
   void _applyDatePreset(String preset, {bool notify = true}) {
     final today = _dateOnly(DateTime.now());
@@ -96,6 +105,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
       }
       page = 0;
     }
+
     if (notify) {
       _reload(apply);
     } else {
@@ -105,7 +115,11 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
 
   Future<void> _pickDate(bool start) async {
     final initial = start ? (from ?? DateTime.now()) : (to ?? DateTime.now());
-    final value = await showDatePicker(context: context, initialDate: initial, firstDate: DateTime(2000), lastDate: DateTime.now().add(const Duration(days: 366)));
+    final value = await showDatePicker(
+        context: context,
+        initialDate: initial,
+        firstDate: DateTime(2000),
+        lastDate: DateTime.now().add(const Duration(days: 366)));
     if (value == null) return;
     _reload(() {
       datePreset = 'Custom';
@@ -120,32 +134,182 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
     });
   }
 
-  Future<void> _correct(Map<String,Object?> row) async {
+  Future<void> _correct(Map<String, Object?> row) async {
     try {
-      final data=await AppDatabase.instance.saleCorrectionData(row['id'].toString());
-      if(!mounted)return;
-      final header=(data['header'] as Map).cast<String,Object?>();
-      final lines=(data['lines'] as List).map((x)=>Map<String,Object?>.from(x as Map)).toList();
-      double invoiceDiscount=(header['discount'] as num? ?? 0).toDouble();
-      double delivery=(header['delivery_charge'] as num? ?? 0).toDouble();
-      double other=(header['other_charge'] as num? ?? 0).toDouble();
-      String notes=(header['notes']??'').toString();
-      final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(
-        title:Text('Correct Invoice ${header['no']}'),
-        content:SizedBox(width:820,height:520,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          Text('Owner/Manager correction. Quantities are locked to protect stock history; prices, discounts, tax and charges are audited.',style:TextStyle(fontSize:11,color:V3Style.mutedFor(context))),
-          const SizedBox(height:10),
-          Expanded(child:ListView.separated(itemCount:lines.length,separatorBuilder:(_,__)=>const Divider(height:1),itemBuilder:(context,i){final line=lines[i];final qty=(line['qty'] as num? ?? 0).toDouble();return Padding(padding:const EdgeInsets.symmetric(vertical:6),child:Row(children:[Expanded(flex:3,child:Text('${line['name']}\nQty ${qty.toStringAsFixed(2)}',style:const TextStyle(fontWeight:FontWeight.w700))),const SizedBox(width:8),Expanded(child:TextFormField(initialValue:(line['unit_price'] as num? ?? 0).toString(),keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'Price'),onChanged:(v)=>line['unit_price']=double.tryParse(v)??0)),const SizedBox(width:8),Expanded(child:TextFormField(initialValue:(line['discount'] as num? ?? 0).toString(),keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'Discount'),onChanged:(v)=>line['discount']=double.tryParse(v)??0)),const SizedBox(width:8),Expanded(child:TextFormField(initialValue:(line['tax'] as num? ?? 0).toString(),keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'Tax amount'),onChanged:(v)=>line['tax']=double.tryParse(v)??0))]));})),
-          const SizedBox(height:8),
-          Row(children:[Expanded(child:TextFormField(initialValue:invoiceDiscount.toString(),keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'Invoice discount'),onChanged:(v)=>invoiceDiscount=double.tryParse(v)??0)),const SizedBox(width:8),Expanded(child:TextFormField(initialValue:delivery.toString(),keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'Delivery'),onChanged:(v)=>delivery=double.tryParse(v)??0)),const SizedBox(width:8),Expanded(child:TextFormField(initialValue:other.toString(),keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'Other charge'),onChanged:(v)=>other=double.tryParse(v)??0))]),
-          const SizedBox(height:8),TextFormField(initialValue:notes,decoration:const InputDecoration(labelText:'Correction note / invoice notes'),onChanged:(v)=>notes=v),
-        ])),
-        actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Cancel')),FilledButton.icon(onPressed:()=>Navigator.pop(c,true),icon:const Icon(Icons.save_outlined,size:17),label:const Text('Save Correction'))],
-      ));
-      if(ok==true){await AppDatabase.instance.reviseSaleFinancials(saleId:row['id'].toString(),lines:lines,invoiceDiscount:invoiceDiscount,deliveryCharge:delivery,otherCharge:other,notes:notes);if(mounted)_reload();}
-    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString().replaceFirst('Exception: ',''))));}
+      final data =
+          await AppDatabase.instance.saleCorrectionData(row['id'].toString());
+      if (!mounted) return;
+      final header = (data['header'] as Map).cast<String, Object?>();
+      final lines = (data['lines'] as List)
+          .map((x) => Map<String, Object?>.from(x as Map))
+          .toList();
+      double invoiceDiscount = (header['discount'] as num? ?? 0).toDouble();
+      double delivery = (header['delivery_charge'] as num? ?? 0).toDouble();
+      double other = (header['other_charge'] as num? ?? 0).toDouble();
+      String notes = (header['notes'] ?? '').toString();
+      final ok = await showDialog<bool>(
+          context: context,
+          builder: (c) => AlertDialog(
+                title: Text('Correct Invoice ${header['no']}'),
+                content: SizedBox(
+                    width: 820,
+                    height: 520,
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                              'Owner/Manager correction. Quantities are locked to protect stock history; prices, discounts, tax and charges are audited.',
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  color: V3Style.mutedFor(context))),
+                          const SizedBox(height: 10),
+                          Expanded(
+                              child: ListView.separated(
+                                  itemCount: lines.length,
+                                  separatorBuilder: (_, __) =>
+                                      const Divider(height: 1),
+                                  itemBuilder: (context, i) {
+                                    final line = lines[i];
+                                    final qty =
+                                        (line['qty'] as num? ?? 0).toDouble();
+                                    return Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 6),
+                                        child: Row(children: [
+                                          Expanded(
+                                              flex: 3,
+                                              child: Text(
+                                                  '${line['name']}\nQty ${qty.toStringAsFixed(2)}',
+                                                  style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w700))),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                              child: TextFormField(
+                                                  initialValue:
+                                                      (line['unit_price']
+                                                                  as num? ??
+                                                              0)
+                                                          .toString(),
+                                                  keyboardType:
+                                                      const TextInputType
+                                                          .numberWithOptions(
+                                                          decimal: true),
+                                                  decoration:
+                                                      const InputDecoration(
+                                                          labelText: 'Price'),
+                                                  onChanged: (v) =>
+                                                      line['unit_price'] =
+                                                          double.tryParse(v) ??
+                                                              0)),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                              child: TextFormField(
+                                                  initialValue:
+                                                      (line['discount']
+                                                                  as num? ??
+                                                              0)
+                                                          .toString(),
+                                                  keyboardType:
+                                                      const TextInputType
+                                                          .numberWithOptions(
+                                                          decimal: true),
+                                                  decoration:
+                                                      const InputDecoration(
+                                                          labelText:
+                                                              'Discount'),
+                                                  onChanged: (v) =>
+                                                      line['discount'] =
+                                                          double.tryParse(v) ??
+                                                              0)),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                              child: TextFormField(
+                                                  initialValue:
+                                                      (line['tax'] as num? ?? 0)
+                                                          .toString(),
+                                                  keyboardType:
+                                                      const TextInputType
+                                                          .numberWithOptions(
+                                                          decimal: true),
+                                                  decoration:
+                                                      const InputDecoration(
+                                                          labelText:
+                                                              'Tax amount'),
+                                                  onChanged: (v) =>
+                                                      line['tax'] =
+                                                          double.tryParse(v) ??
+                                                              0))
+                                        ]));
+                                  })),
+                          const SizedBox(height: 8),
+                          Row(children: [
+                            Expanded(
+                                child: TextFormField(
+                                    initialValue: invoiceDiscount.toString(),
+                                    keyboardType:
+                                        const TextInputType.numberWithOptions(
+                                            decimal: true),
+                                    decoration: const InputDecoration(
+                                        labelText: 'Invoice discount'),
+                                    onChanged: (v) => invoiceDiscount =
+                                        double.tryParse(v) ?? 0)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                                child: TextFormField(
+                                    initialValue: delivery.toString(),
+                                    keyboardType:
+                                        const TextInputType.numberWithOptions(
+                                            decimal: true),
+                                    decoration: const InputDecoration(
+                                        labelText: 'Delivery'),
+                                    onChanged: (v) =>
+                                        delivery = double.tryParse(v) ?? 0)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                                child: TextFormField(
+                                    initialValue: other.toString(),
+                                    keyboardType:
+                                        const TextInputType.numberWithOptions(
+                                            decimal: true),
+                                    decoration: const InputDecoration(
+                                        labelText: 'Other charge'),
+                                    onChanged: (v) =>
+                                        other = double.tryParse(v) ?? 0))
+                          ]),
+                          const SizedBox(height: 8),
+                          TextFormField(
+                              initialValue: notes,
+                              decoration: const InputDecoration(
+                                  labelText: 'Correction note / invoice notes'),
+                              onChanged: (v) => notes = v),
+                        ])),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(c, false),
+                      child: const Text('Cancel')),
+                  FilledButton.icon(
+                      onPressed: () => Navigator.pop(c, true),
+                      icon: const Icon(Icons.save_outlined, size: 17),
+                      label: const Text('Save Correction'))
+                ],
+              ));
+      if (ok == true) {
+        await AppDatabase.instance.reviseSaleFinancials(
+            saleId: row['id'].toString(),
+            lines: lines,
+            invoiceDiscount: invoiceDiscount,
+            deliveryCharge: delivery,
+            otherCharge: other,
+            notes: notes);
+        if (mounted) _reload();
+      }
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(e.toString().replaceFirst('Exception: ', ''))));
+    }
   }
-
 
   Future<void> _void(Map<String, Object?> row) async {
     final reason = TextEditingController();
@@ -153,69 +317,203 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
       context: context,
       builder: (c) => AlertDialog(
         title: Text('Void Sale ${row['no']}?'),
-        content: SizedBox(width: 500, child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('This is an audited reversal, not a delete. RELIQ will reverse stock, open balance and linked payment impact. This cannot be used when posted returns already exist.'),
-          const SizedBox(height: 12),
-          TextField(controller: reason, autofocus: true, decoration: const InputDecoration(labelText: 'Reason for void *')),
-        ])),
+        content: SizedBox(
+            width: 500,
+            child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                      'This is an audited reversal, not a delete. RELIQ will reverse stock, open balance and linked payment impact. This cannot be used when posted returns already exist.'),
+                  const SizedBox(height: 12),
+                  TextField(
+                      controller: reason,
+                      autofocus: true,
+                      decoration: const InputDecoration(
+                          labelText: 'Reason for void *')),
+                ])),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(c, true), style: FilledButton.styleFrom(backgroundColor: Theme.of(c).colorScheme.error), child: const Text('Void & Reverse')),
+          TextButton(
+              onPressed: () => Navigator.pop(c, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(c, true),
+              style: FilledButton.styleFrom(
+                  backgroundColor: Theme.of(c).colorScheme.error),
+              child: const Text('Void & Reverse')),
         ],
       ),
     );
-    if (ok != true) { Future<void>.delayed(const Duration(milliseconds: 450), reason.dispose); return; }
+    if (ok != true) {
+      Future<void>.delayed(const Duration(milliseconds: 450), reason.dispose);
+      return;
+    }
     if (reason.text.trim().isEmpty) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('A void reason is required.')));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('A void reason is required.')));
       Future<void>.delayed(const Duration(milliseconds: 450), reason.dispose);
       return;
     }
     try {
-      await AppDatabase.instance.voidSale(row['id'].toString(), reason: reason.text.trim());
-      if (mounted) { _reload(); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Sale ${row['no']} was voided and reversed.'))); }
+      await AppDatabase.instance
+          .voidSale(row['id'].toString(), reason: reason.text.trim());
+      if (mounted) {
+        _reload();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Sale ${row['no']} was voided and reversed.')));
+      }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
-    } finally { Future<void>.delayed(const Duration(milliseconds: 450), reason.dispose); }
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(e.toString().replaceFirst('Exception: ', ''))));
+    } finally {
+      Future<void>.delayed(const Duration(milliseconds: 450), reason.dispose);
+    }
   }
 
   Future<void> _print(Map<String, Object?> row) async {
-    showReliqWorkingSnack(context, 'Preparing invoice ${row['no']}… RELIQ is still working.');
+    showReliqWorkingSnack(
+        context, 'Preparing invoice ${row['no']}… RELIQ is still working.');
     await Future<void>.delayed(const Duration(milliseconds: 16));
     try {
-      final data = await AppDatabase.instance.saleCorrectionData(row['id'].toString());
+      final data =
+          await AppDatabase.instance.saleCorrectionData(row['id'].toString());
       await PrintService.printSaleFromData(data);
-      if (mounted) { hideReliqWorkingSnack(context); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invoice opened in system preview.'))); }
+      if (mounted) {
+        hideReliqWorkingSnack(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Invoice opened in system preview.')));
+      }
     } catch (e) {
-      if (mounted) { hideReliqWorkingSnack(context); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Print failed: ${e.toString().replaceFirst('Exception: ', '')}'))); }
+      if (mounted) {
+        hideReliqWorkingSnack(context);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                'Print failed: ${e.toString().replaceFirst('Exception: ', '')}')));
+      }
     }
   }
 
   Future<void> _whatsapp(Map<String, Object?> row) async {
-    showReliqWorkingSnack(context, 'Preparing WhatsApp invoice ${row['no']}… RELIQ is still working.');
+    showReliqWorkingSnack(context,
+        'Preparing WhatsApp invoice ${row['no']}… RELIQ is still working.');
     await Future<void>.delayed(const Duration(milliseconds: 16));
     try {
-      final data = await AppDatabase.instance.saleCorrectionData(row['id'].toString());
-      final h = Map<String,Object?>.from(data['header'] as Map);
+      final data =
+          await AppDatabase.instance.saleCorrectionData(row['id'].toString());
+      final h = Map<String, Object?>.from(data['header'] as Map);
       final settings = await AppDatabase.instance.settings();
-      final phone = (h['customer_whatsapp'] ?? h['customer_phone'] ?? '').toString().trim();
-      if (phone.isEmpty) throw Exception('This customer has no WhatsApp/phone number saved.');
+      final phone = (h['customer_whatsapp'] ?? h['customer_phone'] ?? '')
+          .toString()
+          .trim();
+      if (phone.isEmpty)
+        throw Exception('This customer has no WhatsApp/phone number saved.');
       final message = WhatsAppService.invoiceMessage(settings, h);
-      await WhatsAppService.openChat(phone: phone, message: message, defaultCountryCode: settings['whatsapp_country_code'] ?? '');
+      final shareResult = await WhatsAppService.shareDocument(
+        settings: settings,
+        phone: phone,
+        message: message,
+        prepareAttachment: () => PrintService.prepareSaleFromData(data),
+      );
       await AppDatabase.instance.logCommunication(
         partyType: 'Customer',
         partyId: (h['customer_id'] ?? '').toString(),
         channel: 'WhatsApp',
         documentType: 'Invoice',
         documentId: row['id'].toString(),
-        action: 'Prepared / opened',
+        action: shareResult.auditAction,
       );
       if (mounted) {
         hideReliqWorkingSnack(context);
         _reload();
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('WhatsApp opened with the invoice message. The sale is unchanged; attach the invoice PDF when ready.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(shareResult.userMessage('Invoice'))));
       }
     } catch (e) {
-      if (mounted) { hideReliqWorkingSnack(context); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('WhatsApp: ${e.toString().replaceFirst('Exception: ', '')}'))); }
+      if (mounted) {
+        hideReliqWorkingSnack(context);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                'WhatsApp: ${e.toString().replaceFirst('Exception: ', '')}')));
+      }
+    }
+  }
+
+  Future<void> _savePdf(Map<String, Object?> row) async {
+    showReliqWorkingSnack(
+        context, 'Preparing invoice ${row['no']} PDF… RELIQ is still working.');
+    await Future<void>.delayed(const Duration(milliseconds: 16));
+    try {
+      final data =
+          await AppDatabase.instance.saleCorrectionData(row['id'].toString());
+      final attachment = await PrintService.prepareSaleFromData(data);
+      final savedPath = await DocumentShareService.savePdfAs(
+        attachment,
+        suggestedFileName: 'Invoice_${row['no']}.pdf',
+      );
+      if (mounted) {
+        hideReliqWorkingSnack(context);
+        if (savedPath != null)
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Invoice PDF saved to $savedPath')));
+      }
+    } catch (e) {
+      if (mounted) {
+        hideReliqWorkingSnack(context);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                'Save PDF: ${e.toString().replaceFirst('Exception: ', '')}')));
+      }
+    }
+  }
+
+  Future<void> _emailPdf(Map<String, Object?> row) async {
+    showReliqWorkingSnack(context,
+        'Preparing invoice ${row['no']} email… RELIQ is still working.');
+    await Future<void>.delayed(const Duration(milliseconds: 16));
+    try {
+      final data =
+          await AppDatabase.instance.saleCorrectionData(row['id'].toString());
+      final h = Map<String, Object?>.from(data['header'] as Map);
+      final settings = await AppDatabase.instance.settings();
+      final email = (h['customer_email'] ?? '').toString().trim();
+      if (email.isEmpty)
+        throw Exception('This customer has no email address saved.');
+      final attachment = await PrintService.prepareSaleFromData(data);
+      final businessName =
+          (settings['business_name'] ?? 'RELIQ Solutions').trim();
+      final currency = (settings['currency'] ?? 'KWD').trim();
+      final decimals = int.tryParse(settings['currency_decimals'] ?? '3') ?? 3;
+      final total = (h['total'] as num? ?? 0).toDouble();
+      await DocumentShareService.openEmailDraftWithAttachment(
+        recipient: email,
+        subject: 'Invoice ${h['no'] ?? row['no']} - $businessName',
+        body:
+            'Hello ${h['customer_name'] ?? 'Customer'},\n\nPlease find invoice ${h['no'] ?? row['no']} attached.\nTotal: $currency ${total.toStringAsFixed(decimals)}\n\nThank you,\n$businessName',
+        attachment: attachment,
+      );
+      await AppDatabase.instance.logCommunication(
+        partyType: 'Customer',
+        partyId: (h['customer_id'] ?? '').toString(),
+        channel: 'Email',
+        documentType: 'Invoice',
+        documentId: row['id'].toString(),
+        action: 'PDF prepared / opened',
+      );
+      if (mounted) {
+        hideReliqWorkingSnack(context);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'Email draft opened and the invoice PDF is ready in Finder/Explorer. Attach it, then send.')));
+      }
+    } catch (e) {
+      if (mounted) {
+        hideReliqWorkingSnack(context);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                'Email PDF: ${e.toString().replaceFirst('Exception: ', '')}')));
+      }
     }
   }
 
@@ -224,9 +522,13 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
     return Padding(
       padding: V3Style.pagePadding,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Sales History', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
+        const Text('Sales History',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
         const SizedBox(height: 4),
-        Text('Filter and review invoices without loading the whole sales database at once.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+        Text(
+            'Filter and review invoices without loading the whole sales database at once.',
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant)),
         const SizedBox(height: 14),
         _filters(),
         const SizedBox(height: 12),
@@ -234,33 +536,67 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
           child: FutureBuilder<Map<String, Object>>(
             future: _historyFuture,
             builder: (context, snapshot) {
-              if (snapshot.hasError) return Center(child: Text('Sales history could not load: ${snapshot.error}'));
-              if (snapshot.connectionState == ConnectionState.waiting || !snapshot.hasData) return const ReliqLoadingState(message: 'Loading sales history…', detail: 'Large date ranges can take a moment. RELIQ is still working.');
-              final rows = (snapshot.data!['rows'] as List).cast<Map<String, Object?>>();
+              if (snapshot.hasError)
+                return Center(
+                    child: Text(
+                        'Sales history could not load: ${snapshot.error}'));
+              if (snapshot.connectionState == ConnectionState.waiting ||
+                  !snapshot.hasData)
+                return const ReliqLoadingState(
+                    message: 'Loading sales history…',
+                    detail:
+                        'Large date ranges can take a moment. RELIQ is still working.');
+              final rows =
+                  (snapshot.data!['rows'] as List).cast<Map<String, Object?>>();
               final total = snapshot.data!['total'] as int;
-              final summary = Map<String,double>.from((snapshot.data!['summary'] as Map?)?.map((k,v)=>MapEntry(k.toString(),(v as num).toDouble())) ?? const <String,double>{});
+              final summary = Map<String, double>.from(
+                  (snapshot.data!['summary'] as Map?)?.map((k, v) =>
+                          MapEntry(k.toString(), (v as num).toDouble())) ??
+                      const <String, double>{});
               if (rows.isEmpty && total == 0) {
-                return Card(child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.receipt_long_outlined, size: 38), const SizedBox(height: 8), const Text('No sales match these filters.')] )));
+                return Card(
+                    child: Center(
+                        child:
+                            Column(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.receipt_long_outlined, size: 38),
+                  const SizedBox(height: 8),
+                  const Text('No sales match these filters.')
+                ])));
               }
               return Column(children: [
                 if (canViewProfit) _profitSummary(summary),
                 if (canViewProfit) const SizedBox(height: 10),
-                Expanded(child: Card(
+                Expanded(
+                    child: Card(
                   clipBehavior: Clip.antiAlias,
                   child: Column(children: [
-                    Expanded(child: LayoutBuilder(builder: (context, c) => SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: SizedBox(width: c.maxWidth < (canViewProfit ? 1360 : 1160) ? (canViewProfit ? 1360 : 1160) : c.maxWidth, child: Column(children: [
-                        _header(),
-                        Expanded(child: ListView.builder(itemCount: rows.length, itemBuilder: (context, i) => _row(rows[i], i))),
-                      ])),
-                    ))),
+                    Expanded(
+                        child: LayoutBuilder(
+                            builder: (context, c) => SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: SizedBox(
+                                      width: c.maxWidth <
+                                              (canViewProfit ? 1360 : 1160)
+                                          ? (canViewProfit ? 1360 : 1160)
+                                          : c.maxWidth,
+                                      child: Column(children: [
+                                        _header(),
+                                        Expanded(
+                                            child: ListView.builder(
+                                                itemCount: rows.length,
+                                                itemBuilder: (context, i) =>
+                                                    _row(rows[i], i))),
+                                      ])),
+                                ))),
                     V4PaginationBar(
                       total: total,
                       page: page,
                       pageSize: pageSize,
                       onPageChanged: (v) => _reload(() => page = v),
-                      onPageSizeChanged: (v) => _reload(() { pageSize = v; page = 0; }),
+                      onPageSizeChanged: (v) => _reload(() {
+                        pageSize = v;
+                        page = 0;
+                      }),
                     ),
                   ]),
                 )),
@@ -275,38 +611,77 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
   Widget _filters() => Card(
         child: Padding(
           padding: const EdgeInsets.all(12),
-          child: Wrap(spacing: 9, runSpacing: 9, crossAxisAlignment: WrapCrossAlignment.center, children: [
-            SizedBox(width: 300, child: TextField(
-              controller: search,
-              onChanged: _searchChanged,
-              decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Invoice, customer, phone, payment method'),
-            )),
-            SizedBox(width: 145, child: DropdownButtonFormField<String>(
-              value: status,
-              isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Status'),
-              items: const ['All','Paid','Due','Returned'].map((x) => DropdownMenuItem(value: x, child: Text(x))).toList(),
-              onChanged: (v) => _reload(() { status = v ?? 'All'; page = 0; }),
-            )),
-            SizedBox(width: 155, child: DropdownButtonFormField<String>(
-              value: sort,
-              isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Sort'),
-              items: const ['Newest','Oldest','Total high','Total low','Due high'].map((x) => DropdownMenuItem(value: x, child: Text(x))).toList(),
-              onChanged: (v) => _reload(() { sort = v ?? 'Newest'; page = 0; }),
-            )),
-            _datePresetButton('Today'),
-            _datePresetButton('Yesterday'),
-            _datePresetButton('This month'),
-            _datePresetButton('Custom'),
-            if (datePreset == 'Custom') ...[
-              OutlinedButton.icon(onPressed: () => _pickDate(true), icon: const Icon(Icons.calendar_today_outlined, size: 16), label: Text(from == null ? 'From' : DateFormat('dd MMM yyyy').format(from!))),
-              OutlinedButton.icon(onPressed: () => _pickDate(false), icon: const Icon(Icons.event_outlined, size: 16), label: Text(to == null ? 'To' : DateFormat('dd MMM yyyy').format(to!))),
-            ],
-          ]),
+          child: Wrap(
+              spacing: 9,
+              runSpacing: 9,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                SizedBox(
+                    width: 300,
+                    child: TextField(
+                      controller: search,
+                      onChanged: _searchChanged,
+                      decoration: const InputDecoration(
+                          prefixIcon: Icon(Icons.search),
+                          hintText: 'Invoice, customer, phone, payment method'),
+                    )),
+                SizedBox(
+                    width: 145,
+                    child: DropdownButtonFormField<String>(
+                      value: status,
+                      isExpanded: true,
+                      decoration: const InputDecoration(labelText: 'Status'),
+                      items: const ['All', 'Paid', 'Due', 'Returned']
+                          .map(
+                              (x) => DropdownMenuItem(value: x, child: Text(x)))
+                          .toList(),
+                      onChanged: (v) => _reload(() {
+                        status = v ?? 'All';
+                        page = 0;
+                      }),
+                    )),
+                SizedBox(
+                    width: 155,
+                    child: DropdownButtonFormField<String>(
+                      value: sort,
+                      isExpanded: true,
+                      decoration: const InputDecoration(labelText: 'Sort'),
+                      items: const [
+                        'Newest',
+                        'Oldest',
+                        'Total high',
+                        'Total low',
+                        'Due high'
+                      ]
+                          .map(
+                              (x) => DropdownMenuItem(value: x, child: Text(x)))
+                          .toList(),
+                      onChanged: (v) => _reload(() {
+                        sort = v ?? 'Newest';
+                        page = 0;
+                      }),
+                    )),
+                _datePresetButton('Today'),
+                _datePresetButton('Yesterday'),
+                _datePresetButton('This month'),
+                _datePresetButton('Custom'),
+                if (datePreset == 'Custom') ...[
+                  OutlinedButton.icon(
+                      onPressed: () => _pickDate(true),
+                      icon: const Icon(Icons.calendar_today_outlined, size: 16),
+                      label: Text(from == null
+                          ? 'From'
+                          : DateFormat('dd MMM yyyy').format(from!))),
+                  OutlinedButton.icon(
+                      onPressed: () => _pickDate(false),
+                      icon: const Icon(Icons.event_outlined, size: 16),
+                      label: Text(to == null
+                          ? 'To'
+                          : DateFormat('dd MMM yyyy').format(to!))),
+                ],
+              ]),
         ),
       );
-
 
   Widget _datePresetButton(String preset) {
     final selected = datePreset == preset;
@@ -314,50 +689,101 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
       onPressed: () => _applyDatePreset(preset),
       style: OutlinedButton.styleFrom(
         backgroundColor: selected
-            ? Theme.of(context).colorScheme.primary.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? .16 : .10)
+            ? Theme.of(context).colorScheme.primary.withValues(
+                alpha:
+                    Theme.of(context).brightness == Brightness.dark ? .16 : .10)
             : null,
-        foregroundColor: selected ? Theme.of(context).colorScheme.primary : null,
-        side: BorderSide(color: selected ? Theme.of(context).colorScheme.primary : Theme.of(context).dividerColor),
+        foregroundColor:
+            selected ? Theme.of(context).colorScheme.primary : null,
+        side: BorderSide(
+            color: selected
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).dividerColor),
       ),
-      child: Text(preset, style: TextStyle(fontWeight: selected ? FontWeight.w800 : FontWeight.w600)),
+      child: Text(preset,
+          style: TextStyle(
+              fontWeight: selected ? FontWeight.w800 : FontWeight.w600)),
     );
   }
 
-  Widget _profitSummary(Map<String,double> summary) => Card(
+  Widget _profitSummary(Map<String, double> summary) => Card(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal:14,vertical:11),
-          child: Row(children:[
-            const Icon(Icons.insights_outlined,size:20,color:V3Style.success),
-            const SizedBox(width:10),
-            Expanded(child:_profitMetric('NET PRODUCT SALES',summary['net_sales']??0)),
-            Expanded(child:_profitMetric('GROSS PROFIT',summary['gross_profit']??0)),
-            Expanded(child:_profitMetric('GROSS MARGIN',summary['margin_pct']??0,percent:true)),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          child: Row(children: [
+            const Icon(Icons.insights_outlined,
+                size: 20, color: V3Style.success),
+            const SizedBox(width: 10),
+            Expanded(
+                child: _profitMetric(
+                    'NET PRODUCT SALES', summary['net_sales'] ?? 0)),
+            Expanded(
+                child: _profitMetric(
+                    'GROSS PROFIT', summary['gross_profit'] ?? 0)),
+            Expanded(
+                child: _profitMetric('GROSS MARGIN', summary['margin_pct'] ?? 0,
+                    percent: true)),
           ]),
         ),
       );
 
-  Widget _profitMetric(String label,double value,{bool percent=false}) => Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Text(label,style:const TextStyle(fontSize:9,fontWeight:FontWeight.w900,color:V3Style.muted,letterSpacing:.4)),
-        const SizedBox(height:3),
-        Text(percent?'${value.toStringAsFixed(2)}%':value.toStringAsFixed(3),style:TextStyle(fontSize:16,fontWeight:FontWeight.w900,color:percent?(value>=0?V3Style.success:V3Style.danger):null)),
+  Widget _profitMetric(String label, double value, {bool percent = false}) =>
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label,
+            style: const TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w900,
+                color: V3Style.muted,
+                letterSpacing: .4)),
+        const SizedBox(height: 3),
+        Text(
+            percent ? '${value.toStringAsFixed(2)}%' : value.toStringAsFixed(3),
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                color: percent
+                    ? (value >= 0 ? V3Style.success : V3Style.danger)
+                    : null)),
       ]);
 
   Widget _header() => Container(
-        height: (Theme.of(context).listTileTheme.minTileHeight ?? 42).clamp(42, 60).toDouble(),
+        height: (Theme.of(context).listTileTheme.minTileHeight ?? 42)
+            .clamp(42, 60)
+            .toDouble(),
         padding: const EdgeInsets.symmetric(horizontal: 14),
         color: V3Style.tableHeader(context),
         child: Row(children: [
-          const Expanded(flex: 3, child: Text('INVOICE / CUSTOMER', style: _head)),
+          const Expanded(
+              flex: 3, child: Text('INVOICE / CUSTOMER', style: _head)),
           const SizedBox(width: 150, child: Text('DATE', style: _head)),
-          const SizedBox(width: 130, child: Text('METHOD / STATUS', style: _head)),
-          const SizedBox(width: 120, child: Text('BRANCH / USER', style: _head)),
-          const SizedBox(width: 90, child: Text('TOTAL', textAlign: TextAlign.right, style: _head)),
-          const SizedBox(width: 90, child: Text('DUE', textAlign: TextAlign.right, style: _head)),
-          if(canViewProfit) const SizedBox(width: 95, child: Text('PROFIT', textAlign: TextAlign.right, style: _head)),
-          if(canViewProfit) const SizedBox(width: 85, child: Text('MARGIN', textAlign: TextAlign.right, style: _head)),
-          const SizedBox(width: 80, child: Text('WHATSAPP', textAlign: TextAlign.center, style: _head)),
-          const SizedBox(width: 54, child: Text('PRINT', textAlign: TextAlign.center, style: _head)),
-          const SizedBox(width: 54, child: Text('EDIT', textAlign: TextAlign.center, style: _head)),
+          const SizedBox(
+              width: 130, child: Text('METHOD / STATUS', style: _head)),
+          const SizedBox(
+              width: 120, child: Text('BRANCH / USER', style: _head)),
+          const SizedBox(
+              width: 90,
+              child: Text('TOTAL', textAlign: TextAlign.right, style: _head)),
+          const SizedBox(
+              width: 90,
+              child: Text('DUE', textAlign: TextAlign.right, style: _head)),
+          if (canViewProfit)
+            const SizedBox(
+                width: 95,
+                child:
+                    Text('PROFIT', textAlign: TextAlign.right, style: _head)),
+          if (canViewProfit)
+            const SizedBox(
+                width: 85,
+                child:
+                    Text('MARGIN', textAlign: TextAlign.right, style: _head)),
+          const SizedBox(
+              width: 80,
+              child: Text('SHARE', textAlign: TextAlign.center, style: _head)),
+          const SizedBox(
+              width: 54,
+              child: Text('PRINT', textAlign: TextAlign.center, style: _head)),
+          const SizedBox(
+              width: 54,
+              child: Text('EDIT', textAlign: TextAlign.center, style: _head)),
         ]),
       );
 
@@ -370,32 +796,163 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
     return V4AlternateRow(
       index: i,
       child: Row(children: [
-        Expanded(flex: 3, child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text('${r['no'] ?? '—'}', style: const TextStyle(fontWeight: FontWeight.w800)),
-          Text('${r['customer_name'] ?? 'Walk-in customer'}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: V3Style.mutedFor(context))),
-        ])),
-        SizedBox(width: 150, child: Text(dt == null ? '—' : DateFormat('dd MMM yyyy, HH:mm').format(dt.toLocal()), style: const TextStyle(fontSize: 12))),
-        SizedBox(width: 130, child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text('${r['payment_method'] ?? '—'}', style: const TextStyle(fontSize: 12)),
-          Text(returned ? '${r['status']}' : (balance > 0 ? 'Balance due' : 'Paid'), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: returned ? const Color(0xFF7C3AED) : balance > 0 ? const Color(0xFFB45309) : const Color(0xFF16794C))),
-        ])),
-        SizedBox(width: 120, child: Text('${r['branch_name'] ?? '—'}\n${r['user_name'] ?? '—'}', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10))),
-        SizedBox(width: 90, child: Text((r['total'] as num? ?? 0).toStringAsFixed(3), textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.w800))),
-        SizedBox(width: 90, child: Text(balance.toStringAsFixed(3), textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w800, color: balance > 0 ? Theme.of(context).colorScheme.error : null))),
-        if(canViewProfit) SizedBox(width:95,child:Text(profit.toStringAsFixed(3),textAlign:TextAlign.right,style:TextStyle(fontWeight:FontWeight.w800,color:profit<0?V3Style.danger:null))),
-        if(canViewProfit) SizedBox(width:85,child:Text('${margin.toStringAsFixed(1)}%',textAlign:TextAlign.right,style:TextStyle(fontWeight:FontWeight.w800,color:margin<0?V3Style.danger:null))),
-        SizedBox(width:80,child:Tooltip(
-          message: r['whatsapp_share_at'] == null ? 'Not shared yet — open WhatsApp invoice' : 'WhatsApp prepared ${DateFormat('dd MMM, HH:mm').format((DateTime.tryParse(r['whatsapp_share_at'].toString()) ?? DateTime.now()).toLocal())} — click to resend',
-          child: IconButton(
-            onPressed:()=>_whatsapp(r),
-            icon: Icon(r['whatsapp_share_at'] == null ? Icons.chat_outlined : Icons.mark_chat_read_outlined,size:18,color:r['whatsapp_share_at'] == null ? null : V3Style.success),
-          ),
-        )),
-        SizedBox(width:54,child:IconButton(tooltip:'Print / reprint',onPressed:()=>_print(r),icon:const Icon(Icons.print_outlined,size:18))),
-        SizedBox(width:54,child:canEdit?PopupMenuButton<String>(tooltip:'Admin actions',icon:const Icon(Icons.more_vert,size:19),onSelected:(v){if(v=='edit')_correct(r);if(v=='void')_void(r);},itemBuilder:(context)=>const [PopupMenuItem(value:'edit',child:ListTile(dense:true,contentPadding:EdgeInsets.zero,leading:Icon(Icons.edit_note_outlined),title:Text('Financial correction'))),PopupMenuItem(value:'void',child:ListTile(dense:true,contentPadding:EdgeInsets.zero,leading:Icon(Icons.cancel_outlined),title:Text('Void & reverse')))]):const SizedBox.shrink()),
+        Expanded(
+            flex: 3,
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('${r['no'] ?? '—'}',
+                      style: const TextStyle(fontWeight: FontWeight.w800)),
+                  Text('${r['customer_name'] ?? 'Walk-in customer'}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: 11, color: V3Style.mutedFor(context))),
+                ])),
+        SizedBox(
+            width: 150,
+            child: Text(
+                dt == null
+                    ? '—'
+                    : DateFormat('dd MMM yyyy, HH:mm').format(dt.toLocal()),
+                style: const TextStyle(fontSize: 12))),
+        SizedBox(
+            width: 130,
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('${r['payment_method'] ?? '—'}',
+                      style: const TextStyle(fontSize: 12)),
+                  Text(
+                      returned
+                          ? '${r['status']}'
+                          : (balance > 0 ? 'Balance due' : 'Paid'),
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: returned
+                              ? const Color(0xFF7C3AED)
+                              : balance > 0
+                                  ? const Color(0xFFB45309)
+                                  : const Color(0xFF16794C))),
+                ])),
+        SizedBox(
+            width: 120,
+            child: Text('${r['branch_name'] ?? '—'}\n${r['user_name'] ?? '—'}',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 10))),
+        SizedBox(
+            width: 90,
+            child: Text((r['total'] as num? ?? 0).toStringAsFixed(3),
+                textAlign: TextAlign.right,
+                style: const TextStyle(fontWeight: FontWeight.w800))),
+        SizedBox(
+            width: 90,
+            child: Text(balance.toStringAsFixed(3),
+                textAlign: TextAlign.right,
+                style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: balance > 0
+                        ? Theme.of(context).colorScheme.error
+                        : null))),
+        if (canViewProfit)
+          SizedBox(
+              width: 95,
+              child: Text(profit.toStringAsFixed(3),
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: profit < 0 ? V3Style.danger : null))),
+        if (canViewProfit)
+          SizedBox(
+              width: 85,
+              child: Text('${margin.toStringAsFixed(1)}%',
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: margin < 0 ? V3Style.danger : null))),
+        SizedBox(
+            width: 80,
+            child: PopupMenuButton<String>(
+              tooltip: r['whatsapp_share_at'] == null
+                  ? 'Share invoice document'
+                  : 'WhatsApp prepared ${DateFormat('dd MMM, HH:mm').format((DateTime.tryParse(r['whatsapp_share_at'].toString()) ?? DateTime.now()).toLocal())} — share again',
+              icon: Icon(
+                  r['whatsapp_share_at'] == null
+                      ? Icons.share_outlined
+                      : Icons.mark_chat_read_outlined,
+                  size: 18,
+                  color:
+                      r['whatsapp_share_at'] == null ? null : V3Style.success),
+              onSelected: (value) {
+                if (value == 'whatsapp') _whatsapp(r);
+                if (value == 'save') _savePdf(r);
+                if (value == 'email') _emailPdf(r);
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(
+                    value: 'whatsapp',
+                    child: ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(Icons.chat_outlined),
+                        title: Text('WhatsApp'))),
+                PopupMenuItem(
+                    value: 'save',
+                    child: ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(Icons.download_outlined),
+                        title: Text('Save PDF'))),
+                PopupMenuItem(
+                    value: 'email',
+                    child: ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(Icons.email_outlined),
+                        title: Text('Email PDF'))),
+              ],
+            )),
+        SizedBox(
+            width: 54,
+            child: IconButton(
+                tooltip: 'Print / reprint',
+                onPressed: () => _print(r),
+                icon: const Icon(Icons.print_outlined, size: 18))),
+        SizedBox(
+            width: 54,
+            child: canEdit
+                ? PopupMenuButton<String>(
+                    tooltip: 'Admin actions',
+                    icon: const Icon(Icons.more_vert, size: 19),
+                    onSelected: (v) {
+                      if (v == 'edit') _correct(r);
+                      if (v == 'void') _void(r);
+                    },
+                    itemBuilder: (context) => const [
+                          PopupMenuItem(
+                              value: 'edit',
+                              child: ListTile(
+                                  dense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: Icon(Icons.edit_note_outlined),
+                                  title: Text('Financial correction'))),
+                          PopupMenuItem(
+                              value: 'void',
+                              child: ListTile(
+                                  dense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: Icon(Icons.cancel_outlined),
+                                  title: Text('Void & reverse')))
+                        ])
+                : const SizedBox.shrink()),
       ]),
     );
   }
 }
 
-const _head = TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: V3Style.muted);
+const _head =
+    TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: V3Style.muted);

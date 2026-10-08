@@ -46,15 +46,23 @@ class _V4ProductSearchFieldState extends State<V4ProductSearchField> {
       if (menu.isOpen) menu.close();
       return;
     }
-    final rows = await AppDatabase.instance.products(search: q, activeOnly: widget.activeOnly, limit: widget.maxResults * 4);
-    final filtered = rows.where((p) {
-      if (widget.excludeProductId != null && '${p['id']}' == widget.excludeProductId) return false;
-      final type = (p['product_type'] ?? 'Stocked').toString();
-      if (widget.allowedProductTypes != null && !widget.allowedProductTypes!.contains(type)) return false;
-      if (widget.sellableOnly && ((p['sellable'] as num?) ?? 1).toInt() != 1) return false;
-      if (widget.purchasableOnly && ((p['purchasable'] as num?) ?? 1).toInt() != 1) return false;
-      return true;
-    }).take(widget.maxResults).toList();
+    final rows = await AppDatabase.instance.products(
+        search: q, activeOnly: widget.activeOnly, limit: widget.maxResults * 4);
+    final filtered = rows
+        .where((p) {
+          if (widget.excludeProductId != null &&
+              '${p['id']}' == widget.excludeProductId) return false;
+          final type = (p['product_type'] ?? 'Stocked').toString();
+          if (widget.allowedProductTypes != null &&
+              !widget.allowedProductTypes!.contains(type)) return false;
+          if (widget.sellableOnly &&
+              ((p['sellable'] as num?) ?? 1).toInt() != 1) return false;
+          if (widget.purchasableOnly &&
+              ((p['purchasable'] as num?) ?? 1).toInt() != 1) return false;
+          return true;
+        })
+        .take(widget.maxResults)
+        .toList();
     if (!mounted || id != requestId) return;
     setState(() => results = filtered);
     if (rows.isNotEmpty && !menu.isOpen) menu.open();
@@ -91,16 +99,43 @@ class _V4ProductSearchFieldState extends State<V4ProductSearchField> {
                 Container(
                   width: 34,
                   height: 34,
-                  decoration: BoxDecoration(color: i == 0 ? Theme.of(context).colorScheme.primary.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? .14 : .08) : Theme.of(context).colorScheme.surfaceContainerLowest, borderRadius: BorderRadius.circular(8)),
-                  child: Icon(i == 0 ? Icons.keyboard_return : Icons.inventory_2_outlined, size: 17, color: i == 0 ? V3Style.blue : null),
+                  decoration: BoxDecoration(
+                      color: i == 0
+                          ? Theme.of(context).colorScheme.primary.withValues(
+                              alpha: Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? .14
+                                  : .08)
+                          : Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerLowest,
+                      borderRadius: BorderRadius.circular(8)),
+                  child: Icon(
+                      i == 0
+                          ? Icons.keyboard_return
+                          : Icons.inventory_2_outlined,
+                      size: 17,
+                      color: i == 0 ? V3Style.blue : null),
                 ),
                 const SizedBox(width: 10),
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('${results[i]['name']}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
-                  Text('${results[i]['sku'] ?? '—'} • ${results[i]['external_barcode'] ?? results[i]['internal_barcode'] ?? 'No barcode'} • Stock ${(results[i]['stock'] as num? ?? 0).toStringAsFixed(2)}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: V3Style.muted)),
-                ])),
+                Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text('${results[i]['name']}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w700)),
+                      Text(
+                          '${results[i]['sku'] ?? '—'} • ${results[i]['external_barcode'] ?? results[i]['internal_barcode'] ?? 'No barcode'} • Stock ${(results[i]['stock'] as num? ?? 0).toStringAsFixed(2)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 10, color: V3Style.muted)),
+                    ])),
                 const SizedBox(width: 8),
-                Text((results[i]['cost'] as num? ?? 0).toStringAsFixed(3), style: const TextStyle(fontWeight: FontWeight.w700)),
+                Text((results[i]['cost'] as num? ?? 0).toStringAsFixed(3),
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
               ]),
             ),
           ),

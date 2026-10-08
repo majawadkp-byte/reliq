@@ -57,11 +57,15 @@ class LicenseState {
 
   bool get readOnly => activated && validSignature && !usable;
   bool get isTrial => licenseType == 'trial';
-  String get status => (payload?['status'] ?? 'active').toString().toLowerCase();
-  String get plan => (payload?['plan'] ?? (isTrial ? 'Business Trial' : 'Unlicensed')).toString();
+  String get status =>
+      (payload?['status'] ?? 'active').toString().toLowerCase();
+  String get plan =>
+      (payload?['plan'] ?? (isTrial ? 'Business Trial' : 'Unlicensed'))
+          .toString();
   String get businessName => (payload?['business_name'] ?? '').toString();
   String get licenseId => (payload?['license_id'] ?? '').toString();
-  String get licenseType => (payload?['license_type'] ?? 'subscription').toString().toLowerCase();
+  String get licenseType =>
+      (payload?['license_type'] ?? 'subscription').toString().toLowerCase();
   int get maxUsers => (payload?['max_users'] as num?)?.toInt() ?? 0;
   int get maxTerminals => (payload?['max_terminals'] as num?)?.toInt() ?? 0;
   int get maxBranches => (payload?['max_branches'] as num?)?.toInt() ?? 0;
@@ -131,11 +135,16 @@ class LicenseManager {
   // flutter build macos \
   //   --dart-define=V4_LICENSE_PUBLIC_KEY=<PUBLIC_KEY> \
   //   --dart-define=V4_LICENSE_SERVER_URL=https://license.example.com
-  static const vendorPublicKey = String.fromEnvironment('V4_LICENSE_PUBLIC_KEY');
-  static const licenseServerUrl = String.fromEnvironment('V4_LICENSE_SERVER_URL');
-  static const appVersion = String.fromEnvironment('V4_APP_VERSION', defaultValue: '4.0');
-  static const validationIntervalDays = int.fromEnvironment('V4_LICENSE_CHECK_DAYS', defaultValue: 7);
-  static const offlineGraceDays = int.fromEnvironment('V4_LICENSE_OFFLINE_GRACE_DAYS', defaultValue: 14);
+  static const vendorPublicKey =
+      String.fromEnvironment('V4_LICENSE_PUBLIC_KEY');
+  static const licenseServerUrl =
+      String.fromEnvironment('V4_LICENSE_SERVER_URL');
+  static const appVersion =
+      String.fromEnvironment('V4_APP_VERSION', defaultValue: '4.0');
+  static const validationIntervalDays =
+      int.fromEnvironment('V4_LICENSE_CHECK_DAYS', defaultValue: 7);
+  static const offlineGraceDays =
+      int.fromEnvironment('V4_LICENSE_OFFLINE_GRACE_DAYS', defaultValue: 14);
 
   final Ed25519 _algorithm = Ed25519();
   final DeviceInfoPlugin _deviceInfo = DeviceInfoPlugin();
@@ -143,7 +152,8 @@ class LicenseManager {
   bool get developmentBypass => vendorPublicKey.isEmpty;
   bool get serverConfigured => licenseServerUrl.trim().isNotEmpty;
 
-  String _b64NoPad(List<int> bytes) => base64Url.encode(bytes).replaceAll('=', '');
+  String _b64NoPad(List<int> bytes) =>
+      base64Url.encode(bytes).replaceAll('=', '');
 
   List<int> _decodeNoPad(String value) {
     final mod = value.length % 4;
@@ -151,7 +161,8 @@ class LicenseManager {
     return base64Url.decode(padded);
   }
 
-  String _url(String path) => '${licenseServerUrl.replaceAll(RegExp(r'/+$'), '')}$path';
+  String _url(String path) =>
+      '${licenseServerUrl.replaceAll(RegExp(r'/+$'), '')}$path';
 
   Future<String?> savedCode() => savedToken();
 
@@ -189,9 +200,11 @@ class LicenseManager {
       final stable = <String, dynamic>{};
       for (final key in preferred) {
         final value = data[key];
-        if (value != null && value.toString().trim().isNotEmpty) stable[key] = value.toString();
+        if (value != null && value.toString().trim().isNotEmpty)
+          stable[key] = value.toString();
       }
-      if (stable.isEmpty) stable.addAll(data.map((k, v) => MapEntry(k, v?.toString())));
+      if (stable.isEmpty)
+        stable.addAll(data.map((k, v) => MapEntry(k, v?.toString())));
       final raw = '${Platform.operatingSystem}|${jsonEncode(stable)}';
       return hash.sha256.convert(utf8.encode(raw)).toString();
     } catch (_) {
@@ -227,7 +240,9 @@ class LicenseManager {
     }
 
     var token = await savedToken();
-    if ((token == null || token.trim().isEmpty) && allowNetwork && serverConfigured) {
+    if ((token == null || token.trim().isEmpty) &&
+        allowNetwork &&
+        serverConfigured) {
       final trial = await startOrRestoreTrial();
       if (trial.validSignature) return trial;
     }
@@ -251,40 +266,53 @@ class LicenseManager {
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now().toUtc();
     final lastSeen = DateTime.tryParse(prefs.getString(_lastSeenKey) ?? '');
-    final clockRollback = lastSeen != null && now.isBefore(lastSeen.subtract(const Duration(minutes: 5)));
-    if (!clockRollback) await prefs.setString(_lastSeenKey, now.toIso8601String());
+    final clockRollback = lastSeen != null &&
+        now.isBefore(lastSeen.subtract(const Duration(minutes: 5)));
+    if (!clockRollback)
+      await prefs.setString(_lastSeenKey, now.toIso8601String());
 
-    if (state.expired || state.status == 'revoked' || state.status == 'suspended') return state;
+    if (state.expired ||
+        state.status == 'revoked' ||
+        state.status == 'suspended') return state;
     if (!token.startsWith('$_serverPrefix.')) return state;
 
-    final lastValidation = DateTime.tryParse(prefs.getString(_lastValidationKey) ?? '') ?? state.issuedAt?.toUtc();
+    final lastValidation =
+        DateTime.tryParse(prefs.getString(_lastValidationKey) ?? '') ??
+            state.issuedAt?.toUtc();
     state = state.copyWith(lastValidatedAt: lastValidation?.toLocal());
-    final age = lastValidation == null ? const Duration(days: 9999) : now.difference(lastValidation);
+    final age = lastValidation == null
+        ? const Duration(days: 9999)
+        : now.difference(lastValidation);
     final due = clockRollback || age >= Duration(days: validationIntervalDays);
 
     if (allowNetwork && serverConfigured && due) {
       final refreshed = await refresh(silent: true);
-      if (refreshed.validSignature && !refreshed.offlineCached && !refreshed.validationRequired) return refreshed;
+      if (refreshed.validSignature &&
+          !refreshed.offlineCached &&
+          !refreshed.validationRequired) return refreshed;
     }
 
     if (clockRollback) {
       return state.copyWith(
         validationRequired: true,
-        message: 'System clock changed backwards. Connect to the internet to validate the license.',
+        message:
+            'System clock changed backwards. Connect to the internet to validate the license.',
       );
     }
 
     if (age > Duration(days: offlineGraceDays)) {
       return state.copyWith(
         validationRequired: true,
-        message: 'License validation is overdue. Connect to the internet to continue transactions.',
+        message:
+            'License validation is overdue. Connect to the internet to continue transactions.',
       );
     }
 
     if (due) {
       return state.copyWith(
         offlineCached: true,
-        message: 'Offline — using the cached signed license during the grace period.',
+        message:
+            'Offline — using the cached signed license during the grace period.',
       );
     }
     return state;
@@ -292,10 +320,20 @@ class LicenseManager {
 
   Future<LicenseState> startOrRestoreTrial() async {
     if (developmentBypass) {
-      return const LicenseState(configured: false, activated: false, validSignature: false, expired: false, message: 'Development build');
+      return const LicenseState(
+          configured: false,
+          activated: false,
+          validSignature: false,
+          expired: false,
+          message: 'Development build');
     }
     if (!serverConfigured) {
-      return const LicenseState(configured: true, activated: false, validSignature: false, expired: false, message: 'License server is not configured.');
+      return const LicenseState(
+          configured: true,
+          activated: false,
+          validSignature: false,
+          expired: false,
+          message: 'License server is not configured.');
     }
     try {
       final response = await http
@@ -305,7 +343,8 @@ class LicenseManager {
             body: jsonEncode(await _devicePayload()),
           )
           .timeout(const Duration(seconds: 6));
-      return await _acceptServerResponse(response, successMessage: '14-day Business trial is active.');
+      return await _acceptServerResponse(response,
+          successMessage: '14-day Business trial is active.');
     } catch (e) {
       return LicenseState(
         configured: true,
@@ -320,23 +359,38 @@ class LicenseManager {
   Future<LicenseState> activate(String code) async {
     final clean = code.trim().toUpperCase();
     if (clean.isEmpty) {
-      return const LicenseState(configured: true, activated: false, validSignature: false, expired: false, message: 'Enter an activation key.');
+      return const LicenseState(
+          configured: true,
+          activated: false,
+          validSignature: false,
+          expired: false,
+          message: 'Enter an activation key.');
     }
 
     // Backward compatibility with the original offline V4L1 signed codes.
-    if (code.trim().startsWith('$_legacyPrefix.') || code.trim().startsWith('$_serverPrefix.')) {
+    if (code.trim().startsWith('$_legacyPrefix.') ||
+        code.trim().startsWith('$_serverPrefix.')) {
       final state = await verify(code.trim());
       if (!state.validSignature) return state;
-      await _storeToken(code.trim(), validatedNow: code.trim().startsWith('$_serverPrefix.'));
+      await _storeToken(code.trim(),
+          validatedNow: code.trim().startsWith('$_serverPrefix.'));
       return state;
     }
 
     if (!serverConfigured) {
-      return const LicenseState(configured: true, activated: false, validSignature: false, expired: false, message: 'This build has no license server URL.');
+      return const LicenseState(
+          configured: true,
+          activated: false,
+          validSignature: false,
+          expired: false,
+          message: 'This build has no license server URL.');
     }
 
     try {
-      final payload = <String, dynamic>{...await _devicePayload(), 'activation_key': clean};
+      final payload = <String, dynamic>{
+        ...await _devicePayload(),
+        'activation_key': clean
+      };
       final response = await http
           .post(
             Uri.parse(_url('/api/v1/licenses/activate')),
@@ -344,7 +398,8 @@ class LicenseManager {
             body: jsonEncode(payload),
           )
           .timeout(const Duration(seconds: 8));
-      return await _acceptServerResponse(response, successMessage: 'License activated.');
+      return await _acceptServerResponse(response,
+          successMessage: 'License activated.');
     } catch (e) {
       return LicenseState(
         configured: true,
@@ -359,7 +414,12 @@ class LicenseManager {
   Future<LicenseState> refresh({bool silent = false}) async {
     final token = await savedToken();
     if (token == null) {
-      return const LicenseState(configured: true, activated: false, validSignature: false, expired: false, message: 'No server license to refresh.');
+      return const LicenseState(
+          configured: true,
+          activated: false,
+          validSignature: false,
+          expired: false,
+          message: 'No server license to refresh.');
     }
     if (!token.startsWith('$_serverPrefix.')) {
       return verify(token);
@@ -367,7 +427,10 @@ class LicenseManager {
     if (!serverConfigured) return verify(token);
 
     try {
-      final payload = <String, dynamic>{...await _devicePayload(), 'token': token};
+      final payload = <String, dynamic>{
+        ...await _devicePayload(),
+        'token': token
+      };
       final response = await http
           .post(
             Uri.parse(_url('/api/v1/licenses/refresh')),
@@ -375,15 +438,20 @@ class LicenseManager {
             body: jsonEncode(payload),
           )
           .timeout(const Duration(seconds: 7));
-      return await _acceptServerResponse(response, successMessage: 'License refreshed.');
+      return await _acceptServerResponse(response,
+          successMessage: 'License refreshed.');
     } catch (e) {
       final local = await verify(token);
-      if (silent && local.validSignature) return local.copyWith(offlineCached: true, message: 'Offline — cached license retained.');
-      return local.copyWith(message: 'Could not refresh license: ${_cleanError(e)}');
+      if (silent && local.validSignature)
+        return local.copyWith(
+            offlineCached: true, message: 'Offline — cached license retained.');
+      return local.copyWith(
+          message: 'Could not refresh license: ${_cleanError(e)}');
     }
   }
 
-  Future<LicenseState> _acceptServerResponse(http.Response response, {required String successMessage}) async {
+  Future<LicenseState> _acceptServerResponse(http.Response response,
+      {required String successMessage}) async {
     Map<String, dynamic> body = const {};
     try {
       final decoded = jsonDecode(response.body);
@@ -396,26 +464,37 @@ class LicenseManager {
         activated: false,
         validSignature: false,
         expired: false,
-        message: (body['detail'] ?? body['message'] ?? 'License server returned ${response.statusCode}.').toString(),
+        message: (body['detail'] ??
+                body['message'] ??
+                'License server returned ${response.statusCode}.')
+            .toString(),
       );
     }
 
     final token = (body['token'] ?? '').toString();
     if (token.isEmpty) {
-      return const LicenseState(configured: true, activated: false, validSignature: false, expired: false, message: 'License server response did not contain a signed token.');
+      return const LicenseState(
+          configured: true,
+          activated: false,
+          validSignature: false,
+          expired: false,
+          message: 'License server response did not contain a signed token.');
     }
 
     final verified = await verify(token);
     if (!verified.validSignature) return verified;
     await _storeToken(token, validatedNow: true);
-    return verified.copyWith(message: successMessage, lastValidatedAt: DateTime.now());
+    return verified.copyWith(
+        message: successMessage, lastValidatedAt: DateTime.now());
   }
 
   Future<void> _storeToken(String token, {required bool validatedNow}) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_tokenKey, token.trim());
     await prefs.remove(_legacyTokenKey);
-    if (validatedNow) await prefs.setString(_lastValidationKey, DateTime.now().toUtc().toIso8601String());
+    if (validatedNow)
+      await prefs.setString(
+          _lastValidationKey, DateTime.now().toUtc().toIso8601String());
   }
 
   Future<LicenseState> verify(String code) async {
@@ -431,13 +510,16 @@ class LicenseManager {
 
     try {
       final parts = code.trim().split('.');
-      if (parts.length != 3 || (parts.first != _legacyPrefix && parts.first != _serverPrefix)) {
-        throw const FormatException('This is not a supported V4 signed license token.');
+      if (parts.length != 3 ||
+          (parts.first != _legacyPrefix && parts.first != _serverPrefix)) {
+        throw const FormatException(
+            'This is not a supported V4 signed license token.');
       }
 
       final payloadBytes = _decodeNoPad(parts[1]);
       final signatureBytes = _decodeNoPad(parts[2]);
-      final publicKey = SimplePublicKey(_decodeNoPad(vendorPublicKey), type: KeyPairType.ed25519);
+      final publicKey = SimplePublicKey(_decodeNoPad(vendorPublicKey),
+          type: KeyPairType.ed25519);
       final ok = await _algorithm.verify(
         payloadBytes,
         signature: Signature(signatureBytes, publicKey: publicKey),
@@ -445,14 +527,18 @@ class LicenseManager {
       if (!ok) throw const FormatException('License signature is invalid.');
 
       final decoded = jsonDecode(utf8.decode(payloadBytes));
-      if (decoded is! Map<String, dynamic>) throw const FormatException('License payload is invalid.');
+      if (decoded is! Map<String, dynamic>)
+        throw const FormatException('License payload is invalid.');
       final version = (decoded['version'] as num?)?.toInt() ?? 1;
-      if (version != 1 && version != 2) throw const FormatException('Unsupported license version.');
+      if (version != 1 && version != 2)
+        throw const FormatException('Unsupported license version.');
 
       DateTime? expires;
       final rawExpiry = decoded['expires_at'];
-      if (rawExpiry != null && rawExpiry.toString().isNotEmpty) expires = DateTime.tryParse(rawExpiry.toString())?.toUtc();
-      final expired = expires != null && DateTime.now().toUtc().isAfter(expires);
+      if (rawExpiry != null && rawExpiry.toString().isNotEmpty)
+        expires = DateTime.tryParse(rawExpiry.toString())?.toUtc();
+      final expired =
+          expires != null && DateTime.now().toUtc().isAfter(expires);
       final status = (decoded['status'] ?? 'active').toString().toLowerCase();
       final blocked = status == 'revoked' || status == 'suspended';
 
@@ -483,27 +569,40 @@ class LicenseManager {
 
   Future<LicenseState> requireUsable({String? entitlement}) async {
     if (developmentBypass) {
-      return const LicenseState(configured: false, activated: false, validSignature: false, expired: false, message: 'Development build');
+      return const LicenseState(
+          configured: false,
+          activated: false,
+          validSignature: false,
+          expired: false,
+          message: 'Development build');
     }
     final state = await current();
     if (!state.usable) {
-      if (state.validationRequired) throw Exception('License validation is required. Connect to the internet and refresh the license.');
-      if (state.expired) throw Exception('License or trial expired. V4 is read-only until activated or renewed.');
+      if (state.validationRequired)
+        throw Exception(
+            'License validation is required. Connect to the internet and refresh the license.');
+      if (state.expired)
+        throw Exception(
+            'License or trial expired. V4 is read-only until activated or renewed.');
       throw Exception('A valid license is required for this operation.');
     }
     if (entitlement != null && !state.entitlements.contains(entitlement)) {
-      throw Exception('This plan does not include ${entitlement.replaceAll('_', ' ')}.');
+      throw Exception(
+          'This plan does not include ${entitlement.replaceAll('_', ' ')}.');
     }
     return state;
   }
 
   String fingerprint(String code) {
-    final digest = hash.sha256.convert(utf8.encode(code.trim())).bytes.take(6).toList();
+    final digest =
+        hash.sha256.convert(utf8.encode(code.trim())).bytes.take(6).toList();
     return _b64NoPad(digest);
   }
 
   String _cleanError(Object error) {
     final text = error.toString();
-    return text.replaceFirst('Exception: ', '').replaceFirst('ClientException: ', '');
+    return text
+        .replaceFirst('Exception: ', '')
+        .replaceFirst('ClientException: ', '');
   }
 }

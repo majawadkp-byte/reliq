@@ -21,10 +21,10 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
   String query = '';
   String category = 'All';
   String supplier = 'All';
-  String movementFilter='All',stockFilter='All',expiryFilter='All';
+  String movementFilter = 'All', stockFilter = 'All', expiryFilter = 'All';
   int expiryWindow = 30;
   String? branchId;
-  late final branchesFuture=AppDatabase.instance.branches();
+  late final branchesFuture = AppDatabase.instance.branches();
   int pageSize = 10;
   int page = 0;
 
@@ -56,8 +56,10 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
   void initState() {
     super.initState();
     filter = widget.initialFilter;
-    _tabs = TabController(length: 2, vsync: this, initialIndex: filter == 'All' ? 0 : 1);
-    _future = AppDatabase.instance.inventoryIntelligence(lookbackDays: days, branchIdOverride:branchId);
+    _tabs = TabController(
+        length: 2, vsync: this, initialIndex: filter == 'All' ? 0 : 1);
+    _future = AppDatabase.instance
+        .inventoryIntelligence(lookbackDays: days, branchIdOverride: branchId);
   }
 
   @override
@@ -67,9 +69,10 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
   }
 
   void _refreshAnalytics() => setState(() {
-    page = 0;
-    _future = AppDatabase.instance.inventoryIntelligence(lookbackDays: days, branchIdOverride: branchId, forceRefresh: true);
-  });
+        page = 0;
+        _future = AppDatabase.instance.inventoryIntelligence(
+            lookbackDays: days, branchIdOverride: branchId, forceRefresh: true);
+      });
 
   double _n(Map<String, Object?> row, String key) =>
       (row[key] as num? ?? 0).toDouble();
@@ -77,13 +80,30 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
   bool _flag(Map<String, Object?> row, String key) =>
       (row[key] as num? ?? 0) != 0;
 
-  bool _matches(Map<String,Object?> row,String view){
-    final key=<String,String>{'Fast Moving':'fast_moving','Slow Moving':'slow_moving','Dead Stock':'dead_stock','Low Stock':'low_stock','Out of Stock':'out_of_stock','Overstock':'overstock','Demand Rising':'demand_rising','Demand Falling':'demand_dropping'}[view];
-    if(key!=null)return _flag(row,key);
-    if(view=='Medium Moving')return _n(row,'velocity')>0&&!_flag(row,'fast_moving')&&!_flag(row,'slow_moving');
-    final expiry=row['days_to_expiry'] as num?;
-    if(view=='Expired')return expiry!=null&&expiry<0&&_n(row,'stock')>0;
-    if(view=='Expiring Soon')return expiry!=null&&expiry>=0&&expiry<=expiryWindow&&_n(row,'stock')>0;
+  bool _matches(Map<String, Object?> row, String view) {
+    final key = <String, String>{
+      'Fast Moving': 'fast_moving',
+      'Slow Moving': 'slow_moving',
+      'Dead Stock': 'dead_stock',
+      'Low Stock': 'low_stock',
+      'Out of Stock': 'out_of_stock',
+      'Overstock': 'overstock',
+      'Demand Rising': 'demand_rising',
+      'Demand Falling': 'demand_dropping'
+    }[view];
+    if (key != null) return _flag(row, key);
+    if (view == 'Medium Moving')
+      return _n(row, 'velocity') > 0 &&
+          !_flag(row, 'fast_moving') &&
+          !_flag(row, 'slow_moving');
+    final expiry = row['days_to_expiry'] as num?;
+    if (view == 'Expired')
+      return expiry != null && expiry < 0 && _n(row, 'stock') > 0;
+    if (view == 'Expiring Soon')
+      return expiry != null &&
+          expiry >= 0 &&
+          expiry <= expiryWindow &&
+          _n(row, 'stock') > 0;
     return true;
   }
 
@@ -91,13 +111,16 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
     final q = query.trim().toLowerCase();
     final rows = input.where((row) {
       if (q.isNotEmpty) {
-        final hay = '${row['name']} ${row['sku']} ${row['category']} ${row['supplier']}'
-            .toLowerCase();
+        final hay =
+            '${row['name']} ${row['sku']} ${row['category']} ${row['supplier']}'
+                .toLowerCase();
         if (!hay.contains(q)) return false;
       }
       if (category != 'All' && '${row['category']}' != category) return false;
       if (supplier != 'All' && '${row['supplier']}' != supplier) return false;
-      if(!_matches(row,movementFilter)||!_matches(row,stockFilter)||!_matches(row,expiryFilter))return false;
+      if (!_matches(row, movementFilter) ||
+          !_matches(row, stockFilter) ||
+          !_matches(row, expiryFilter)) return false;
       switch (filter) {
         case 'Needs Attention':
           return _flag(row, 'needs_attention');
@@ -110,7 +133,7 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
         case 'Purchase Blocked':
           return _flag(row, 'purchase_blocked');
         case 'Medium Moving':
-          return _matches(row,'Medium Moving');
+          return _matches(row, 'Medium Moving');
         case 'Fast Moving':
           return _flag(row, 'fast_moving');
         case 'Slow Moving':
@@ -125,9 +148,13 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
           return _flag(row, 'overstock');
         case 'Expiring Soon':
           final expiry = row['days_to_expiry'] as num?;
-          return expiry != null && expiry >= 0 && expiry <= expiryWindow && _n(row,'stock')>0;
+          return expiry != null &&
+              expiry >= 0 &&
+              expiry <= expiryWindow &&
+              _n(row, 'stock') > 0;
         case 'Expired':
-          return (row['days_to_expiry'] as num? ?? 1) < 0 && _n(row,'stock')>0;
+          return (row['days_to_expiry'] as num? ?? 1) < 0 &&
+              _n(row, 'stock') > 0;
         case 'Projected Expiry Risk':
           return _flag(row, 'projected_expiry_risk');
         case 'Reorder Recommended':
@@ -152,7 +179,8 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
         case 'Recommended Action':
           return '${a['recommendation']}'.compareTo('${b['recommendation']}');
         case 'Expiry Date':
-          return (a['days_to_expiry'] as num? ?? double.infinity).compareTo(b['days_to_expiry'] as num? ?? double.infinity);
+          return (a['days_to_expiry'] as num? ?? double.infinity)
+              .compareTo(b['days_to_expiry'] as num? ?? double.infinity);
         case 'Name':
           return '${a['name']}'
               .toLowerCase()
@@ -221,7 +249,8 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
                         Text(
                           'RELIQ explains what is happening, how confident the signal is, and what the business should consider doing next.',
                           style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -239,12 +268,15 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
                     onChanged: (value) => setState(() {
                       days = value ?? 30;
                       page = 0;
-                      _future = AppDatabase.instance
-                          .inventoryIntelligence(lookbackDays: days, branchIdOverride:branchId);
+                      _future = AppDatabase.instance.inventoryIntelligence(
+                          lookbackDays: days, branchIdOverride: branchId);
                     }),
                   ),
                   const SizedBox(width: 6),
-                  IconButton(tooltip: 'Recalculate latest analytics', onPressed: _refreshAnalytics, icon: const Icon(Icons.refresh)),
+                  IconButton(
+                      tooltip: 'Recalculate latest analytics',
+                      onPressed: _refreshAnalytics,
+                      icon: const Icon(Icons.refresh)),
                 ],
               ),
               const SizedBox(height: 14),
@@ -253,7 +285,9 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
                 isScrollable: true,
                 tabs: const [
                   Tab(icon: Icon(Icons.insights_outlined), text: 'Insights'),
-                  Tab(icon: Icon(Icons.fact_check_outlined), text: 'Stock Decisions'),
+                  Tab(
+                      icon: Icon(Icons.fact_check_outlined),
+                      text: 'Stock Decisions'),
                 ],
               ),
               const SizedBox(height: 12),
@@ -274,7 +308,8 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
   }
 
   Widget _insights(List<Map<String, Object?>> rows) {
-    final stockValue = rows.fold<double>(0, (sum, r) => sum + _n(r, 'stock_value'));
+    final stockValue =
+        rows.fold<double>(0, (sum, r) => sum + _n(r, 'stock_value'));
     final reorderValue = rows.fold<double>(
       0,
       (sum, r) => sum + (_n(r, 'suggested_order') * _n(r, 'cost')),
@@ -302,28 +337,62 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
           .compareTo(_n(a, 'suggested_order') * _n(a, 'cost')));
     final overstock = rows.where((r) => _flag(r, 'overstock')).toList()
       ..sort((a, b) => _n(b, 'stock_value').compareTo(_n(a, 'stock_value')));
-    final expiry = rows.where((r) => _n(r, 'projected_expiry_value') > 0.001).toList()
+    final expiry = rows
+        .where((r) => _n(r, 'projected_expiry_value') > 0.001)
+        .toList()
       ..sort((a, b) => _n(b, 'projected_expiry_value')
           .compareTo(_n(a, 'projected_expiry_value')));
 
     return ListView(
       children: [
         Wrap(spacing: 8, runSpacing: 8, children: [
-          for (final entry in <String,String>{'Low Stock':'low_stock','Out of Stock':'out_of_stock','Overstock':'overstock','Fast Moving':'fast_moving','Slow Moving':'slow_moving','Dead Stock':'dead_stock','Expiring Soon':'expiring_soon','Demand Rising':'demand_rising','Demand Falling':'demand_dropping'}.entries)
-            ActionChip(avatar: Icon(Icons.filter_alt_outlined, size:16, color: V3Style.labelAccent(context)), label: Text('${entry.key} · ${rows.where((r)=>_flag(r,entry.value)).length}'), onPressed:()=>setState((){filter=entry.key;page=0;_tabs.index=1;})),
-          ActionChip(label:Text('Expired · ${rows.where((r)=>(r['days_to_expiry'] as num? ?? 1)<0 && _n(r,'stock')>0).length}'),onPressed:()=>setState((){filter='Expired';page=0;_tabs.index=1;})),
+          for (final entry in <String, String>{
+            'Low Stock': 'low_stock',
+            'Out of Stock': 'out_of_stock',
+            'Overstock': 'overstock',
+            'Fast Moving': 'fast_moving',
+            'Slow Moving': 'slow_moving',
+            'Dead Stock': 'dead_stock',
+            'Expiring Soon': 'expiring_soon',
+            'Demand Rising': 'demand_rising',
+            'Demand Falling': 'demand_dropping'
+          }.entries)
+            ActionChip(
+                avatar: Icon(Icons.filter_alt_outlined,
+                    size: 16, color: V3Style.labelAccent(context)),
+                label: Text(
+                    '${entry.key} · ${rows.where((r) => _flag(r, entry.value)).length}'),
+                onPressed: () => setState(() {
+                      filter = entry.key;
+                      page = 0;
+                      _tabs.index = 1;
+                    })),
+          ActionChip(
+              label: Text(
+                  'Expired · ${rows.where((r) => (r['days_to_expiry'] as num? ?? 1) < 0 && _n(r, 'stock') > 0).length}'),
+              onPressed: () => setState(() {
+                    filter = 'Expired';
+                    page = 0;
+                    _tabs.index = 1;
+                  })),
         ]),
         const SizedBox(height: 12),
         Wrap(
           spacing: 10,
           runSpacing: 10,
           children: [
-            _stat('Inventory Health', '$health%', Icons.health_and_safety_outlined, V3Style.success),
-            _stat('Stock Value', stockValue.toStringAsFixed(3), Icons.inventory_2_outlined, V3Style.blue),
-            _stat('Needs Attention', '$attention', Icons.warning_amber_outlined, V3Style.warning),
-            _stat('Out of Stock', '$out', Icons.remove_shopping_cart_outlined, V3Style.danger),
-            _stat('Suggested Purchase', reorderValue.toStringAsFixed(3), Icons.shopping_bag_outlined, V3Style.purple),
-            _stat('Expiry Value at Risk', expiryRiskValue.toStringAsFixed(3), Icons.event_busy_outlined, const Color(0xFFAD1457)),
+            _stat('Inventory Health', '$health%',
+                Icons.health_and_safety_outlined, V3Style.success),
+            _stat('Stock Value', stockValue.toStringAsFixed(3),
+                Icons.inventory_2_outlined, V3Style.blue),
+            _stat('Needs Attention', '$attention', Icons.warning_amber_outlined,
+                V3Style.warning),
+            _stat('Out of Stock', '$out', Icons.remove_shopping_cart_outlined,
+                V3Style.danger),
+            _stat('Suggested Purchase', reorderValue.toStringAsFixed(3),
+                Icons.shopping_bag_outlined, V3Style.purple),
+            _stat('Expiry Value at Risk', expiryRiskValue.toStringAsFixed(3),
+                Icons.event_busy_outlined, const Color(0xFFAD1457)),
           ],
         ),
         const SizedBox(height: 14),
@@ -337,9 +406,11 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
                 _bar('Fast moving', fast, rows.length, V3Style.blue),
                 _bar('Slow moving', slow, rows.length, V3Style.warning),
                 _bar('Dead stock', dead, rows.length, V3Style.danger),
-                _bar('Expiring ≤30d', expiring, rows.length, const Color(0xFFAD1457)),
+                _bar('Expiring ≤30d', expiring, rows.length,
+                    const Color(0xFFAD1457)),
                 _bar('Demand rising', rising, rows.length, V3Style.teal),
-                _bar('Demand falling', falling, rows.length, const Color(0xFFEF6C00)),
+                _bar('Demand falling', falling, rows.length,
+                    const Color(0xFFEF6C00)),
               ],
             );
             final actions = _panel(
@@ -359,7 +430,8 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
               ],
             );
             if (stacked) {
-              return Column(children: [movement, const SizedBox(height: 12), actions]);
+              return Column(
+                  children: [movement, const SizedBox(height: 12), actions]);
             }
             return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -376,7 +448,8 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
           context,
           'Top Purchase Priorities',
           buy.take(6).toList(),
-          (r) => '${_n(r, 'suggested_order').toStringAsFixed(2)} ${r['unit'] ?? ''} suggested • ${r['confidence']} confidence • ${r['target_source']}',
+          (r) =>
+              '${_n(r, 'suggested_order').toStringAsFixed(2)} ${r['unit'] ?? ''} suggested • ${r['confidence']} confidence • ${r['target_source']}',
         ),
         const SizedBox(height: 12),
         _ranked(
@@ -395,13 +468,19 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
           context,
           'Projected Expiry Exposure',
           expiry.take(6).toList(),
-          (r) => '${_n(r, 'projected_stock_at_expiry').toStringAsFixed(2)} units may remain • ${_n(r, 'projected_expiry_value').toStringAsFixed(3)} value at risk',
+          (r) =>
+              '${_n(r, 'projected_stock_at_expiry').toStringAsFixed(2)} units may remain • ${_n(r, 'projected_expiry_value').toStringAsFixed(3)} value at risk',
         ),
       ],
     );
   }
 
-  List<String> _options(List<Map<String,Object?>> rows,String field) => ({for(final r in rows) '${r[field.toLowerCase()]??''}'}..remove('')..remove('All')).toList()..sort();
+  List<String> _options(List<Map<String, Object?>> rows, String field) =>
+      ({for (final r in rows) '${r[field.toLowerCase()] ?? ''}'}
+            ..remove('')
+            ..remove('All'))
+          .toList()
+        ..sort();
 
   Widget _decisions(List<Map<String, Object?>> all) {
     final rows = _filtered(all);
@@ -506,17 +585,110 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
                   }),
                 ),
               ),
-              FutureBuilder<List<Map<String,Object?>>>(future:branchesFuture,builder:(ctx,snap)=>SizedBox(width:180,child:DropdownButtonFormField<String>(value:branchId,isExpanded:true,decoration:const InputDecoration(labelText:'Branch'),items:[const DropdownMenuItem<String>(value:null,child:Text('Current branch')),...(snap.data??[]).map((b)=>DropdownMenuItem(value:'${b['id']}',child:Text('${b['name']}')))],onChanged:(v)=>setState((){branchId=v;category=supplier='All';page=0;_future=AppDatabase.instance.inventoryIntelligence(lookbackDays:days,branchIdOverride:branchId);})))),
-              for(final type in ['Movement','Stock status','Expiry status']) SizedBox(width:180,child:DropdownButtonFormField<String>(isExpanded:true,value:type=='Movement'?movementFilter:type=='Stock status'?stockFilter:expiryFilter,decoration:InputDecoration(labelText:type),items:(type=='Movement'?['All','Fast Moving','Medium Moving','Slow Moving','Dead Stock','Demand Rising','Demand Falling']:type=='Stock status'?['All','Low Stock','Out of Stock','Overstock']:['All','Expiring Soon','Expired']).map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(),onChanged:(v)=>setState((){if(type=='Movement'){movementFilter=v!;}else if(type=='Stock status'){stockFilter=v!;}else{expiryFilter=v!;}page=0;}))),
+              FutureBuilder<List<Map<String, Object?>>>(
+                  future: branchesFuture,
+                  builder: (ctx, snap) => SizedBox(
+                      width: 180,
+                      child: DropdownButtonFormField<String>(
+                          value: branchId,
+                          isExpanded: true,
+                          decoration:
+                              const InputDecoration(labelText: 'Branch'),
+                          items: [
+                            const DropdownMenuItem<String>(
+                                value: null, child: Text('Current branch')),
+                            ...(snap.data ?? []).map((b) => DropdownMenuItem(
+                                value: '${b['id']}',
+                                child: Text('${b['name']}')))
+                          ],
+                          onChanged: (v) => setState(() {
+                                branchId = v;
+                                category = supplier = 'All';
+                                page = 0;
+                                _future = AppDatabase.instance
+                                    .inventoryIntelligence(
+                                        lookbackDays: days,
+                                        branchIdOverride: branchId);
+                              })))),
+              for (final type in ['Movement', 'Stock status', 'Expiry status'])
+                SizedBox(
+                    width: 180,
+                    child: DropdownButtonFormField<String>(
+                        isExpanded: true,
+                        value: type == 'Movement'
+                            ? movementFilter
+                            : type == 'Stock status'
+                                ? stockFilter
+                                : expiryFilter,
+                        decoration: InputDecoration(labelText: type),
+                        items: (type == 'Movement'
+                                ? [
+                                    'All',
+                                    'Fast Moving',
+                                    'Medium Moving',
+                                    'Slow Moving',
+                                    'Dead Stock',
+                                    'Demand Rising',
+                                    'Demand Falling'
+                                  ]
+                                : type == 'Stock status'
+                                    ? [
+                                        'All',
+                                        'Low Stock',
+                                        'Out of Stock',
+                                        'Overstock'
+                                      ]
+                                    : ['All', 'Expiring Soon', 'Expired'])
+                            .map((v) =>
+                                DropdownMenuItem(value: v, child: Text(v)))
+                            .toList(),
+                        onChanged: (v) => setState(() {
+                              if (type == 'Movement') {
+                                movementFilter = v!;
+                              } else if (type == 'Stock status') {
+                                stockFilter = v!;
+                              } else {
+                                expiryFilter = v!;
+                              }
+                              page = 0;
+                            }))),
               for (final field in ['Category', 'Supplier'])
-                SizedBox(width: 180, child: DropdownButtonFormField<String>(
-                  value: field == 'Category' ? category : supplier, isExpanded: true,
-                  decoration: InputDecoration(labelText: field),
-                  items: ['All', ..._options(all,field)].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
-                  onChanged: (v) => setState(() { if (field == 'Category') { category = v ?? 'All'; } else { supplier = v ?? 'All'; } page = 0; }),
-                )),
-              if (filter == 'Expiring Soon' || expiryFilter == 'Expiring Soon') SizedBox(width: 150, child: DropdownButtonFormField<int>(value: expiryWindow, decoration: const InputDecoration(labelText: 'Expiry within'), items: [7,14,30,60,90].map((d) => DropdownMenuItem(value:d,child:Text('$d days'))).toList(), onChanged:(v)=>setState((){expiryWindow=v??30;page=0;}))),
-              Text('${rows.length} products', style: const TextStyle(fontWeight: FontWeight.w700)),
+                SizedBox(
+                    width: 180,
+                    child: DropdownButtonFormField<String>(
+                      value: field == 'Category' ? category : supplier,
+                      isExpanded: true,
+                      decoration: InputDecoration(labelText: field),
+                      items: ['All', ..._options(all, field)]
+                          .map(
+                              (v) => DropdownMenuItem(value: v, child: Text(v)))
+                          .toList(),
+                      onChanged: (v) => setState(() {
+                        if (field == 'Category') {
+                          category = v ?? 'All';
+                        } else {
+                          supplier = v ?? 'All';
+                        }
+                        page = 0;
+                      }),
+                    )),
+              if (filter == 'Expiring Soon' || expiryFilter == 'Expiring Soon')
+                SizedBox(
+                    width: 150,
+                    child: DropdownButtonFormField<int>(
+                        value: expiryWindow,
+                        decoration:
+                            const InputDecoration(labelText: 'Expiry within'),
+                        items: [7, 14, 30, 60, 90]
+                            .map((d) => DropdownMenuItem(
+                                value: d, child: Text('$d days')))
+                            .toList(),
+                        onChanged: (v) => setState(() {
+                              expiryWindow = v ?? 30;
+                              page = 0;
+                            }))),
+              Text('${rows.length} products',
+                  style: const TextStyle(fontWeight: FontWeight.w700)),
             ],
           ),
         ),
@@ -527,7 +699,8 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
               : ListView.separated(
                   itemCount: pageRows.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) => _decisionCard(pageRows[index]),
+                  itemBuilder: (context, index) =>
+                      _decisionCard(pageRows[index]),
                 ),
         ),
         const SizedBox(height: 8),
@@ -576,10 +749,15 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
           runSpacing: 6,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Text('${row['name']}', style: const TextStyle(fontWeight: FontWeight.w800)),
+            Text('${row['name']}',
+                style: const TextStyle(fontWeight: FontWeight.w800)),
             _chip('${row['health']}', accent),
             _chip('${row['demand_signal']}', V3Style.info),
-            _chip('${row['demand_state'] ?? 'Demand review'}', (row['auto_purchase_eligible'] as num? ?? 0).toInt()==1 ? V3Style.success : V3Style.warning),
+            _chip(
+                '${row['demand_state'] ?? 'Demand review'}',
+                (row['auto_purchase_eligible'] as num? ?? 0).toInt() == 1
+                    ? V3Style.success
+                    : V3Style.warning),
             _chip('$confidence confidence', _confidenceColor(confidence)),
           ],
         ),
@@ -598,10 +776,23 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
                 spacing: 16,
                 runSpacing: 5,
                 children: [
-                  _compactMetric('On hand', '${_n(row, 'stock').toStringAsFixed(2)} $unit'),
-                  _compactMetric('Stock will last', coverage < 0 ? 'Unknown' : '${coverage.toStringAsFixed(0)} days'),
-                  _compactMetric('Last sold', row['days_since_sale'] == null ? 'Never / no record' : '${row['days_since_sale']} days ago'),
-                  _compactMetric('Suggested purchase', _n(row, 'suggested_order') <= 0 ? 'None' : '${_n(row, 'suggested_order').toStringAsFixed(2)} $unit'),
+                  _compactMetric('On hand',
+                      '${_n(row, 'stock').toStringAsFixed(2)} $unit'),
+                  _compactMetric(
+                      'Stock will last',
+                      coverage < 0
+                          ? 'Unknown'
+                          : '${coverage.toStringAsFixed(0)} days'),
+                  _compactMetric(
+                      'Last sold',
+                      row['days_since_sale'] == null
+                          ? 'Never / no record'
+                          : '${row['days_since_sale']} days ago'),
+                  _compactMetric(
+                      'Suggested purchase',
+                      _n(row, 'suggested_order') <= 0
+                          ? 'None'
+                          : '${_n(row, 'suggested_order').toStringAsFixed(2)} $unit'),
                 ],
               ),
             ],
@@ -618,7 +809,9 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Recommended action', style: TextStyle(fontWeight: FontWeight.w800, color: accent)),
+                Text('Recommended action',
+                    style:
+                        TextStyle(fontWeight: FontWeight.w800, color: accent)),
                 const SizedBox(height: 5),
                 Text('${row['recommendation'] ?? 'Keep monitoring'}'),
                 const SizedBox(height: 12),
@@ -628,34 +821,99 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
                   children: [
                     _detailMetric('SKU', '${row['sku'] ?? '—'}'),
                     _detailMetric('Category', '${row['category'] ?? '—'}'),
-                    _detailMetric('Recent sales', '${_n(row, 'sold_qty').toStringAsFixed(2)} $unit'),
-                    _detailMetric('Forecast daily demand', _n(row, 'velocity').toStringAsFixed(2)),
-                    _detailMetric('Demand trend', trend == null ? '${row['demand_signal']}' : '${trend >= 0 ? '+' : ''}${trend.toStringAsFixed(0)}%'),
-                    _detailMetric('Forecast confidence', '$confidence (${_n(row, 'forecast_confidence_score').toStringAsFixed(0)}/100)'),
-                    _detailMetric('Demand state', '${row['demand_state'] ?? 'Review'}'),
-                    _detailMetric('Purchase eligibility', (row['purchase_blocked'] as num? ?? 0).toInt()==1 ? 'Blocked — ${row['purchase_block_reason'] ?? 'Review'}' : 'Eligible'),
-                    _detailMetric('Forecast model', '${row['forecast_model'] ?? 'Adaptive ensemble'}'),
-                    _detailMetric('Demand history source', '${row['forecast_history_source'] ?? 'Own product history'}'),
-                    _detailMetric('7-day forecast', '${_n(row, 'forecast_7_days').toStringAsFixed(2)} $unit'),
-                    _detailMetric('30-day forecast', '${_n(row, 'forecast_30_days').toStringAsFixed(2)} $unit'),
-                    _detailMetric('60-day forecast', '${_n(row, 'forecast_60_days').toStringAsFixed(2)} $unit'),
-                    _detailMetric('90-day forecast', '${_n(row, 'forecast_90_days').toStringAsFixed(2)} $unit'),
-                    _detailMetric('Last-year same 30 days', _n(row, 'seasonality_available') > 0 ? '${_n(row, 'same_period_last_year_30').toStringAsFixed(2)} $unit' : 'Not enough history'),
-                    _detailMetric('Seasonality factor', _n(row, 'seasonality_available') > 0 ? '${_n(row, 'seasonality_factor').toStringAsFixed(2)}×' : 'Not available'),
-                    _detailMetric('Demand variability', _n(row, 'demand_variability').toStringAsFixed(2)),
-                    _detailMetric('Safety stock', '${_n(row, 'safety_stock').toStringAsFixed(2)} $unit'),
-                    _detailMetric('Auto minimum / reorder point', '${_n(row, 'auto_min_stock').toStringAsFixed(2)} $unit'),
-                    _detailMetric('Auto target stock', '${_n(row, 'auto_target_stock').toStringAsFixed(2)} $unit'),
-                    _detailMetric('Recommended reorder date', '${row['recommended_reorder_date'] ?? '—'}'),
-                    _detailMetric('Expected stockout date', '${row['expected_stockout_date'] ?? '—'}'),
-                    _detailMetric('Recent fit accuracy', row['forecast_recent_fit_accuracy'] == null ? 'Not enough comparison data' : '${_n(row, 'forecast_recent_fit_accuracy').toStringAsFixed(0)}%'),
-                    _detailMetric('Recommended stock', '${_n(row, 'dynamic_target').toStringAsFixed(2)} $unit'),
-                    _detailMetric('Target basis', '${row['target_source'] ?? '—'}'),
-                    _detailMetric('Stock value', _n(row, 'stock_value').toStringAsFixed(3)),
-                    _detailMetric('Nearest expiry', daysExpiry == null ? 'Not tracked / unavailable' : '${row['nearest_expiry']} ($daysExpiry days)'),
-                    _detailMetric('Stock likely left at expiry', '${_n(row, 'projected_stock_at_expiry').toStringAsFixed(2)} $unit'),
-                    _detailMetric('Expiry value at risk', _n(row, 'projected_expiry_value').toStringAsFixed(3)),
-                    FutureBuilder<List<Map<String,Object?>>>(future:AppDatabase.instance.db.rawQuery('SELECT b.name,COALESCE(bs.qty,0) qty FROM branches b LEFT JOIN branch_stock bs ON bs.branch_id=b.id AND bs.product_id=? ORDER BY b.name',['${row['id']}']),builder:(ctx,snap)=>Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Stock across branches',style:TextStyle(fontWeight:FontWeight.w700)),for(final b in snap.data??[])Text('${b['name']}: ${(b['qty'] as num? ?? 0).toStringAsFixed(2)}'),if(snap.hasData)Text('Total: ${snap.data!.fold<double>(0,(sum,b)=>sum+(b['qty'] as num? ?? 0).toDouble()).toStringAsFixed(2)}',style:const TextStyle(fontWeight:FontWeight.w800))])),
+                    _detailMetric('Recent sales',
+                        '${_n(row, 'sold_qty').toStringAsFixed(2)} $unit'),
+                    _detailMetric('Forecast daily demand',
+                        _n(row, 'velocity').toStringAsFixed(2)),
+                    _detailMetric(
+                        'Demand trend',
+                        trend == null
+                            ? '${row['demand_signal']}'
+                            : '${trend >= 0 ? '+' : ''}${trend.toStringAsFixed(0)}%'),
+                    _detailMetric('Forecast confidence',
+                        '$confidence (${_n(row, 'forecast_confidence_score').toStringAsFixed(0)}/100)'),
+                    _detailMetric(
+                        'Demand state', '${row['demand_state'] ?? 'Review'}'),
+                    _detailMetric(
+                        'Purchase eligibility',
+                        (row['purchase_blocked'] as num? ?? 0).toInt() == 1
+                            ? 'Blocked — ${row['purchase_block_reason'] ?? 'Review'}'
+                            : 'Eligible'),
+                    _detailMetric('Forecast model',
+                        '${row['forecast_model'] ?? 'Adaptive ensemble'}'),
+                    _detailMetric('Demand history source',
+                        '${row['forecast_history_source'] ?? 'Own product history'}'),
+                    _detailMetric('7-day forecast',
+                        '${_n(row, 'forecast_7_days').toStringAsFixed(2)} $unit'),
+                    _detailMetric('30-day forecast',
+                        '${_n(row, 'forecast_30_days').toStringAsFixed(2)} $unit'),
+                    _detailMetric('60-day forecast',
+                        '${_n(row, 'forecast_60_days').toStringAsFixed(2)} $unit'),
+                    _detailMetric('90-day forecast',
+                        '${_n(row, 'forecast_90_days').toStringAsFixed(2)} $unit'),
+                    _detailMetric(
+                        'Last-year same 30 days',
+                        _n(row, 'seasonality_available') > 0
+                            ? '${_n(row, 'same_period_last_year_30').toStringAsFixed(2)} $unit'
+                            : 'Not enough history'),
+                    _detailMetric(
+                        'Seasonality factor',
+                        _n(row, 'seasonality_available') > 0
+                            ? '${_n(row, 'seasonality_factor').toStringAsFixed(2)}×'
+                            : 'Not available'),
+                    _detailMetric('Demand variability',
+                        _n(row, 'demand_variability').toStringAsFixed(2)),
+                    _detailMetric('Safety stock',
+                        '${_n(row, 'safety_stock').toStringAsFixed(2)} $unit'),
+                    _detailMetric('Auto minimum / reorder point',
+                        '${_n(row, 'auto_min_stock').toStringAsFixed(2)} $unit'),
+                    _detailMetric('Auto target stock',
+                        '${_n(row, 'auto_target_stock').toStringAsFixed(2)} $unit'),
+                    _detailMetric('Recommended reorder date',
+                        '${row['recommended_reorder_date'] ?? '—'}'),
+                    _detailMetric('Expected stockout date',
+                        '${row['expected_stockout_date'] ?? '—'}'),
+                    _detailMetric(
+                        'Recent fit accuracy',
+                        row['forecast_recent_fit_accuracy'] == null
+                            ? 'Not enough comparison data'
+                            : '${_n(row, 'forecast_recent_fit_accuracy').toStringAsFixed(0)}%'),
+                    _detailMetric('Recommended stock',
+                        '${_n(row, 'dynamic_target').toStringAsFixed(2)} $unit'),
+                    _detailMetric(
+                        'Target basis', '${row['target_source'] ?? '—'}'),
+                    _detailMetric('Stock value',
+                        _n(row, 'stock_value').toStringAsFixed(3)),
+                    _detailMetric(
+                        'Nearest expiry',
+                        daysExpiry == null
+                            ? 'Not tracked / unavailable'
+                            : '${row['nearest_expiry']} ($daysExpiry days)'),
+                    _detailMetric('Stock likely left at expiry',
+                        '${_n(row, 'projected_stock_at_expiry').toStringAsFixed(2)} $unit'),
+                    _detailMetric('Expiry value at risk',
+                        _n(row, 'projected_expiry_value').toStringAsFixed(3)),
+                    FutureBuilder<List<Map<String, Object?>>>(
+                        future: AppDatabase.instance.db.rawQuery(
+                            'SELECT b.name,COALESCE(bs.qty,0) qty FROM branches b LEFT JOIN branch_stock bs ON bs.branch_id=b.id AND bs.product_id=? ORDER BY b.name',
+                            [
+                              '${row['id']}'
+                            ]),
+                        builder: (ctx, snap) => Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Stock across branches',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w700)),
+                                  for (final b in snap.data ?? [])
+                                    Text(
+                                        '${b['name']}: ${(b['qty'] as num? ?? 0).toStringAsFixed(2)}'),
+                                  if (snap.hasData)
+                                    Text(
+                                        'Total: ${snap.data!.fold<double>(0, (sum, b) => sum + (b['qty'] as num? ?? 0).toDouble()).toStringAsFixed(2)}',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w800))
+                                ])),
                   ],
                 ),
               ],
@@ -667,46 +925,61 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
   }
 
   Widget _stat(String label, String value, IconData icon, Color color) {
-    return InkWell(onTap:()=>setState((){filter={'Inventory Health':'All','Stock Value':'All','Needs Attention':'Needs Attention','Out of Stock':'Out of Stock','Suggested Purchase':'Reorder Recommended','Expiry Value at Risk':'Projected Expiry Risk'}[label]??'All';page=0;_tabs.index=1;}),child:SizedBox(
-      width: 205,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+    return InkWell(
+        onTap: () => setState(() {
+              filter = {
+                    'Inventory Health': 'All',
+                    'Stock Value': 'All',
+                    'Needs Attention': 'Needs Attention',
+                    'Out of Stock': 'Out of Stock',
+                    'Suggested Purchase': 'Reorder Recommended',
+                    'Expiry Value at Risk': 'Projected Expiry Risk'
+                  }[label] ??
+                  'All';
+              page = 0;
+              _tabs.index = 1;
+            }),
+        child: SizedBox(
+          width: 205,
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(icon, color: color),
-                  const Spacer(),
-                  Container(
-                    width: 34,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(99),
-                    ),
+                  Row(
+                    children: [
+                      Icon(icon, color: color),
+                      const Spacer(),
+                      Container(
+                        width: 34,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: color,
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    value,
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    label,
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              Text(
-                value,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
-    ));
+        ));
   }
 
   Widget _panel(BuildContext context, String title, List<Widget> children) {
@@ -716,7 +989,9 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+            Text(title,
+                style:
+                    const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
             const SizedBox(height: 12),
             ...children,
           ],
@@ -734,7 +1009,8 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
           Row(
             children: [
               Expanded(child: Text(label)),
-              Text('$value', style: const TextStyle(fontWeight: FontWeight.w700)),
+              Text('$value',
+                  style: const TextStyle(fontWeight: FontWeight.w700)),
             ],
           ),
           const SizedBox(height: 5),
@@ -745,7 +1021,8 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
                   height: 8,
                   width: box.maxWidth,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color:
+                        Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(20),
                   ),
                 ),
@@ -799,9 +1076,11 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
             contentPadding: EdgeInsets.zero,
             dense: true,
             leading: const Icon(Icons.chevron_right),
-            title: Text('${row['name']}', style: const TextStyle(fontWeight: FontWeight.w700)),
+            title: Text('${row['name']}',
+                style: const TextStyle(fontWeight: FontWeight.w700)),
             subtitle: Text(detail(row)),
-            trailing: _chip('${row['confidence']}', _confidenceColor('${row['confidence']}')),
+            trailing: _chip('${row['confidence']}',
+                _confidenceColor('${row['confidence']}')),
           ),
       ],
     );
@@ -811,7 +1090,9 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
     return Text.rich(
       TextSpan(
         children: [
-          TextSpan(text: '$label: ', style: const TextStyle(fontWeight: FontWeight.w700)),
+          TextSpan(
+              text: '$label: ',
+              style: const TextStyle(fontWeight: FontWeight.w700)),
           TextSpan(text: value),
         ],
       ),
@@ -826,7 +1107,9 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
         children: [
           Text(
             label,
-            style: TextStyle(fontSize: 11.5, color: Theme.of(context).colorScheme.onSurfaceVariant),
+            style: TextStyle(
+                fontSize: 11.5,
+                color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 2),
           Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
@@ -846,7 +1129,8 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
       child: Text(
         text,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 12),
+        style:
+            TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 12),
       ),
     );
   }
@@ -891,18 +1175,23 @@ class _IntelligenceScreenState extends State<IntelligenceScreen>
   }
 }
 
-
 class _InventoryAnalyticsLoading extends StatelessWidget {
   const _InventoryAnalyticsLoading();
   @override
-  Widget build(BuildContext context) => Center(child: Padding(
-    padding: const EdgeInsets.all(24),
-    child: Column(mainAxisSize: MainAxisSize.min, children: [
-      const SizedBox.square(dimension: 30, child: CircularProgressIndicator(strokeWidth: 3)),
-      const SizedBox(height: 14),
-      const Text('Preparing Inventory Intelligence', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
-      const SizedBox(height: 6),
-      Text('The first calculation can take longer on a large database. RELIQ saves the result and refreshes stale analytics in the background.', textAlign: TextAlign.center, style: TextStyle(color: V3Style.mutedFor(context))),
-    ]),
-  ));
+  Widget build(BuildContext context) => Center(
+          child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox.square(
+              dimension: 30, child: CircularProgressIndicator(strokeWidth: 3)),
+          const SizedBox(height: 14),
+          const Text('Preparing Inventory Intelligence',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 6),
+          Text(
+              'The first calculation can take longer on a large database. RELIQ saves the result and refreshes stale analytics in the background.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: V3Style.mutedFor(context))),
+        ]),
+      ));
 }

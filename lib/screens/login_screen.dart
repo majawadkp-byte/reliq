@@ -56,13 +56,16 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     try {
       if (setup) {
-        if (password.text != confirm.text) throw Exception('Passwords do not match.');
+        if (password.text != confirm.text)
+          throw Exception('Passwords do not match.');
         await AuthService.instance.setupOwnerPassword(password.text);
       }
-      final user = await AuthService.instance.login(username.text, password.text);
+      final user =
+          await AuthService.instance.login(username.text, password.text);
       widget.onAuthenticated(user);
     } catch (e) {
-      if (mounted) setState(() => error = e.toString().replaceFirst('Exception: ', ''));
+      if (mounted)
+        setState(() => error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => submitting = false);
     }
@@ -70,30 +73,37 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (loading)
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
 
     final size = MediaQuery.sizeOf(context);
     final wide = size.width >= 900;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final primaryText = dark ? Colors.white : const Color(0xFF1C2D30);
-    final secondaryText = dark ? const Color(0xFFAEBFBE) : const Color(0xFF66777A);
+    final secondaryText =
+        dark ? const Color(0xFFAEBFBE) : const Color(0xFF66777A);
 
     if (!wide) {
       return Scaffold(
-        backgroundColor: dark ? const Color(0xFF06171B) : const Color(0xFFF2F7F6),
+        backgroundColor:
+            dark ? const Color(0xFF06171B) : const Color(0xFFF2F7F6),
         body: Stack(fit: StackFit.expand, children: [
           Image.asset(
-            dark ? 'assets/branding/reliq_background_dark.jpg' : 'assets/branding/reliq_background_light.png',
+            dark
+                ? 'assets/branding/reliq_background_dark.jpg'
+                : 'assets/branding/reliq_background_light.png',
             fit: BoxFit.cover,
             alignment: Alignment.center,
             filterQuality: FilterQuality.high,
           ),
-          ColoredBox(color: dark ? const Color(0x3A031416) : const Color(0x32FFFFFF)),
+          ColoredBox(
+              color: dark ? const Color(0x3A031416) : const Color(0x32FFFFFF)),
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(22),
-                child: _loginCard(context, primaryText, secondaryText, showBrand: true),
+                child: _loginCard(context, primaryText, secondaryText,
+                    showBrand: true),
               ),
             ),
           ),
@@ -124,7 +134,8 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _brandPane(BuildContext context, {required bool dark, required Size size}) {
+  Widget _brandPane(BuildContext context,
+      {required bool dark, required Size size}) {
     final primary = dark ? Colors.white : const Color(0xFF1C2D30);
     final secondary = dark ? const Color(0xFFE0E9E6) : const Color(0xFF1C2D30);
     final left = (size.width * .067).clamp(58.0, 100.0).toDouble();
@@ -133,7 +144,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Stack(fit: StackFit.expand, children: [
       Image.asset(
-        dark ? 'assets/branding/reliq_background_dark.jpg' : 'assets/branding/reliq_background_light.png',
+        dark
+            ? 'assets/branding/reliq_background_dark.jpg'
+            : 'assets/branding/reliq_background_light.png',
         fit: BoxFit.cover,
         alignment: Alignment.center,
         filterQuality: FilterQuality.high,
@@ -147,8 +160,16 @@ class _LoginScreenState extends State<LoginScreen> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: dark
-                  ? [const Color(0x10000000), Colors.transparent, const Color(0x26000000)]
-                  : [const Color(0x08FFFFFF), Colors.transparent, const Color(0x10000000)],
+                  ? [
+                      const Color(0x10000000),
+                      Colors.transparent,
+                      const Color(0x26000000)
+                    ]
+                  : [
+                      const Color(0x08FFFFFF),
+                      Colors.transparent,
+                      const Color(0x10000000)
+                    ],
             ),
           ),
         ),
@@ -157,7 +178,9 @@ class _LoginScreenState extends State<LoginScreen> {
         left: left,
         top: top,
         child: Image.asset(
-          dark ? 'assets/branding/reliq_logo_white.png' : 'assets/branding/reliq_logo.png',
+          dark
+              ? 'assets/branding/reliq_logo_white.png'
+              : 'assets/branding/reliq_logo.png',
           height: 74,
           fit: BoxFit.contain,
           alignment: Alignment.centerLeft,
@@ -168,7 +191,8 @@ class _LoginScreenState extends State<LoginScreen> {
         bottom: bottom,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 470),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(
               'Fast local POS, inventory intelligence and\nbranch-aware operations.',
               style: TextStyle(
@@ -176,13 +200,18 @@ class _LoginScreenState extends State<LoginScreen> {
                 fontSize: 18,
                 height: 1.35,
                 fontWeight: FontWeight.w800,
-                shadows: dark ? const [Shadow(color: Colors.black45, blurRadius: 10)] : null,
+                shadows: dark
+                    ? const [Shadow(color: Colors.black45, blurRadius: 10)]
+                    : null,
               ),
             ),
             const SizedBox(height: 12),
-            _StoryLine('assets/branding/login_pos.png', 'Barcode-ready sales and purchasing', secondary),
-            _StoryLine('assets/branding/login_inventory.png', 'Stock, transfers and replenishment', secondary),
-            _StoryLine('assets/branding/login_intelligence.png', 'Reports, ledgers and operational audit trail', secondary),
+            _StoryLine('assets/branding/login_pos.png',
+                'Barcode-ready sales and purchasing', secondary),
+            _StoryLine('assets/branding/login_inventory.png',
+                'Stock, transfers and replenishment', secondary),
+            _StoryLine('assets/branding/login_intelligence.png',
+                'Reports, ledgers and operational audit trail', secondary),
           ]),
         ),
       ),
@@ -196,7 +225,8 @@ class _LoginScreenState extends State<LoginScreen> {
     required Color secondaryText,
   }) {
     return Stack(fit: StackFit.expand, children: [
-      ColoredBox(color: dark ? const Color(0xFF06171B) : const Color(0xFFF2F7F6)),
+      ColoredBox(
+          color: dark ? const Color(0xFF06171B) : const Color(0xFFF2F7F6)),
       // The supplied dark reference has a restrained green bloom at the split.
       IgnorePointer(
         child: DecoratedBox(
@@ -205,8 +235,16 @@ class _LoginScreenState extends State<LoginScreen> {
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
               colors: dark
-                  ? [const Color(0x2C6D8819), const Color(0x100B2A25), Colors.transparent]
-                  : [const Color(0x26DDEBB8), const Color(0x12FFFFFF), Colors.transparent],
+                  ? [
+                      const Color(0x2C6D8819),
+                      const Color(0x100B2A25),
+                      Colors.transparent
+                    ]
+                  : [
+                      const Color(0x26DDEBB8),
+                      const Color(0x12FFFFFF),
+                      Colors.transparent
+                    ],
               stops: const [0, .28, .72],
             ),
           ),
@@ -233,7 +271,9 @@ class _LoginScreenState extends State<LoginScreen> {
           decoration: BoxDecoration(
             color: dark ? const Color(0x42102124) : const Color(0xA8FFFFFF),
             borderRadius: radius,
-            border: Border.all(color: dark ? const Color(0x32FFFFFF) : const Color(0xC8DDE5E6)),
+            border: Border.all(
+                color:
+                    dark ? const Color(0x32FFFFFF) : const Color(0xC8DDE5E6)),
             boxShadow: [
               BoxShadow(
                 color: dark ? const Color(0x26000000) : const Color(0x120A2929),
@@ -252,8 +292,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: dark
-                          ? [const Color(0x18FFFFFF), const Color(0x03FFFFFF), const Color(0x0AE1FF05)]
-                          : [const Color(0x78FFFFFF), const Color(0x10FFFFFF), const Color(0x0811908C)],
+                          ? [
+                              const Color(0x18FFFFFF),
+                              const Color(0x03FFFFFF),
+                              const Color(0x0AE1FF05)
+                            ]
+                          : [
+                              const Color(0x78FFFFFF),
+                              const Color(0x10FFFFFF),
+                              const Color(0x0811908C)
+                            ],
                       stops: const [0, .48, 1],
                     ),
                   ),
@@ -267,15 +315,19 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _loginCard(BuildContext context, Color primaryText, Color secondaryText, {bool showBrand = false}) {
+  Widget _loginCard(
+      BuildContext context, Color primaryText, Color secondaryText,
+      {bool showBrand = false}) {
     final size = MediaQuery.sizeOf(context);
     final cardHeight = (size.height * .8225).clamp(520.0, 658.0).toDouble();
     return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: 530, minHeight: cardHeight, maxHeight: cardHeight),
+      constraints: BoxConstraints(
+          maxWidth: 530, minHeight: cardHeight, maxHeight: cardHeight),
       child: ReliqGlass(
         strong: true,
         reflective: true,
-        reflectionStrength: Theme.of(context).brightness == Brightness.dark ? 1.0 : .78,
+        reflectionStrength:
+            Theme.of(context).brightness == Brightness.dark ? 1.0 : .78,
         blur: 28,
         radius: 28,
         padding: const EdgeInsets.fromLTRB(48, 0, 48, 0),
@@ -284,15 +336,26 @@ class _LoginScreenState extends State<LoginScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (showBrand) ...[
-              Align(alignment: Alignment.centerLeft, child: ReliqBrandLockup(compact: true, textColor: primaryText)),
+              Align(
+                  alignment: Alignment.centerLeft,
+                  child:
+                      ReliqBrandLockup(compact: true, textColor: primaryText)),
               const SizedBox(height: 34),
             ],
             Text(
               setup ? 'Secure your account' : 'Sign in',
-              style: TextStyle(color: primaryText, fontSize: 31, fontWeight: FontWeight.w800, letterSpacing: -.7),
+              style: TextStyle(
+                  color: primaryText,
+                  fontSize: 31,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -.7),
             ),
             const SizedBox(height: 6),
-            Text(Brand.tagline, style: TextStyle(color: secondaryText, fontSize: 13, fontWeight: FontWeight.w500)),
+            Text(Brand.tagline,
+                style: TextStyle(
+                    color: secondaryText,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500)),
             const SizedBox(height: 30),
             _frostedField(
               context,
@@ -300,7 +363,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: username,
                 enabled: !setup,
                 textInputAction: TextInputAction.next,
-                style: TextStyle(color: primaryText, fontWeight: FontWeight.w600),
+                style:
+                    TextStyle(color: primaryText, fontWeight: FontWeight.w600),
                 decoration: const InputDecoration(
                   labelText: 'Username',
                   prefixIcon: Icon(Icons.person_outline),
@@ -319,15 +383,19 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: password,
                 autofocus: true,
                 obscureText: obscure,
-                textInputAction: setup ? TextInputAction.next : TextInputAction.done,
+                textInputAction:
+                    setup ? TextInputAction.next : TextInputAction.done,
                 onSubmitted: setup ? null : (_) => _submit(),
-                style: TextStyle(color: primaryText, fontWeight: FontWeight.w600),
+                style:
+                    TextStyle(color: primaryText, fontWeight: FontWeight.w600),
                 decoration: InputDecoration(
                   labelText: setup ? 'Create password / PIN' : 'Password / PIN',
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
                     onPressed: () => setState(() => obscure = !obscure),
-                    icon: Icon(obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                    icon: Icon(obscure
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined),
                   ),
                   filled: false,
                   border: InputBorder.none,
@@ -346,7 +414,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   obscureText: obscure,
                   textInputAction: TextInputAction.done,
                   onSubmitted: (_) => _submit(),
-                  style: TextStyle(color: primaryText, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                      color: primaryText, fontWeight: FontWeight.w600),
                   decoration: const InputDecoration(
                     labelText: 'Confirm password / PIN',
                     prefixIcon: Icon(Icons.verified_user_outlined),
@@ -363,15 +432,24 @@ class _LoginScreenState extends State<LoginScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: V3Style.softFor(V3Style.danger, dark: Theme.of(context).brightness == Brightness.dark),
+                  color: V3Style.softFor(V3Style.danger,
+                      dark: Theme.of(context).brightness == Brightness.dark),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: V3Style.danger.withValues(alpha: .28)),
+                  border:
+                      Border.all(color: V3Style.danger.withValues(alpha: .28)),
                 ),
-                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Icon(Icons.error_outline, color: V3Style.danger, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(error, style: const TextStyle(color: V3Style.danger, fontWeight: FontWeight.w700))),
-                ]),
+                child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.error_outline,
+                          color: V3Style.danger, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                          child: Text(error,
+                              style: const TextStyle(
+                                  color: V3Style.danger,
+                                  fontWeight: FontWeight.w700))),
+                    ]),
               ),
             ],
             const SizedBox(height: 20),
@@ -380,16 +458,22 @@ class _LoginScreenState extends State<LoginScreen> {
               child: FilledButton.icon(
                 onPressed: submitting ? null : _submit,
                 icon: submitting
-                    ? const SizedBox(width: 17, height: 17, child: CircularProgressIndicator(strokeWidth: 2))
+                    ? const SizedBox(
+                        width: 17,
+                        height: 17,
+                        child: CircularProgressIndicator(strokeWidth: 2))
                     : Icon(setup ? Icons.shield_outlined : Icons.login),
-                label: Text(submitting ? 'Signing in…' : (setup ? 'Create Password & Sign In' : 'Sign In')),
+                label: Text(submitting
+                    ? 'Signing in…'
+                    : (setup ? 'Create Password & Sign In' : 'Sign In')),
               ),
             ),
             const SizedBox(height: 18),
             Text(
               'Your data remains local on this computer. User actions are attached\nto the active account for auditing.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: secondaryText, fontSize: 11, height: 1.45),
+              style:
+                  TextStyle(color: secondaryText, fontSize: 11, height: 1.45),
             ),
           ],
         ),
@@ -410,7 +494,12 @@ class _StoryLine extends StatelessWidget {
         child: Row(children: [
           Image.asset(iconAsset, width: 17, height: 17, fit: BoxFit.contain),
           const SizedBox(width: 7),
-          Flexible(child: Text(text, style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.w500))),
+          Flexible(
+              child: Text(text,
+                  style: TextStyle(
+                      color: color,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500))),
         ]),
       );
 }

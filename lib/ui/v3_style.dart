@@ -65,12 +65,15 @@ class V3Style {
 
   /// Theme-aware secondary text. Prefer this over the legacy static `muted`
   /// token for readable body/help text in both light and dark mode.
-  static Color mutedFor(BuildContext context) => Theme.of(context).colorScheme.onSurfaceVariant;
+  static Color mutedFor(BuildContext context) =>
+      Theme.of(context).colorScheme.onSurfaceVariant;
 
   /// Accessible RELIQ accent for labels/indicators. Electric lime is reserved
   /// for dark surfaces; light mode uses deep teal for sufficient contrast.
   static Color labelAccent(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark ? lime : const Color(0xFF11908C);
+      Theme.of(context).brightness == Brightness.dark
+          ? lime
+          : const Color(0xFF11908C);
 
   static Color lineFor(BuildContext context) => Theme.of(context).dividerColor;
 
@@ -101,7 +104,8 @@ class V3Style {
         ),
         borderRadius: BorderRadius.circular(12),
         boxShadow: const [
-          BoxShadow(color: Color(0x24000000), blurRadius: 18, offset: Offset(0, 7)),
+          BoxShadow(
+              color: Color(0x24000000), blurRadius: 18, offset: Offset(0, 7)),
         ],
       );
 }

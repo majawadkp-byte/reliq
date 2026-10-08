@@ -28,7 +28,8 @@ class ShortcutHelperBar extends StatelessWidget {
         runSpacing: 6,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          const Icon(Icons.keyboard_alt_outlined, size: 16, color: V3Style.muted),
+          const Icon(Icons.keyboard_alt_outlined,
+              size: 16, color: V3Style.muted),
           for (final item in items)
             Row(mainAxisSize: MainAxisSize.min, children: [
               Container(
@@ -38,10 +39,13 @@ class ShortcutHelperBar extends StatelessWidget {
                   borderRadius: BorderRadius.circular(5),
                   border: Border.all(color: Theme.of(context).dividerColor),
                 ),
-                child: Text(item.$1, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800)),
+                child: Text(item.$1,
+                    style: const TextStyle(
+                        fontSize: 10, fontWeight: FontWeight.w800)),
               ),
               const SizedBox(width: 4),
-              Text(item.$2, style: const TextStyle(fontSize: 10.5, color: V3Style.muted)),
+              Text(item.$2,
+                  style: const TextStyle(fontSize: 10.5, color: V3Style.muted)),
             ]),
         ],
       ),

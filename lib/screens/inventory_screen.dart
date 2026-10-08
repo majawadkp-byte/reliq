@@ -28,17 +28,27 @@ class _InventoryScreenState extends State<InventoryScreen> {
               TextField(
                 controller: qtyCtl,
                 autofocus: true,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                decoration: const InputDecoration(labelText: 'Quantity change (+ / -)', border: OutlineInputBorder()),
+                keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true, signed: true),
+                decoration: const InputDecoration(
+                    labelText: 'Quantity change (+ / -)',
+                    border: OutlineInputBorder()),
               ),
               const SizedBox(height: 12),
-              TextField(controller: reasonCtl, decoration: const InputDecoration(labelText: 'Reason', border: OutlineInputBorder())),
+              TextField(
+                  controller: reasonCtl,
+                  decoration: const InputDecoration(
+                      labelText: 'Reason', border: OutlineInputBorder())),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Save')),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Save')),
         ],
       ),
     );
@@ -47,10 +57,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
       final change = double.tryParse(qtyCtl.text);
       if (change != null && change != 0) {
         try {
-          await AppDatabase.instance.adjustStock(product['id'] as String, change, reasonCtl.text.trim());
+          await AppDatabase.instance.adjustStock(
+              product['id'] as String, change, reasonCtl.text.trim());
           if (mounted) setState(() {});
         } catch (e) {
-          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+          if (mounted)
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(e.toString().replaceFirst('Exception: ', ''))));
         }
       }
     }
@@ -64,11 +77,15 @@ class _InventoryScreenState extends State<InventoryScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Inventory', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
+            const Text('Inventory',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
             const SizedBox(height: 12),
             TextField(
               onChanged: (v) => setState(() => query = v),
-              decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Search inventory', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.search),
+                  hintText: 'Search inventory',
+                  border: OutlineInputBorder()),
             ),
             const SizedBox(height: 12),
             Expanded(
@@ -76,23 +93,35 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 future: AppDatabase.instance.products(search: query),
                 builder: (context, snapshot) {
                   final rows = snapshot.data ?? [];
-                  if (rows.isEmpty) return const Center(child: Text('No inventory products found.'));
+                  if (rows.isEmpty)
+                    return const Center(
+                        child: Text('No inventory products found.'));
                   return ListView.builder(
                     itemCount: rows.length,
                     itemBuilder: (context, i) {
                       final product = rows[i];
                       final stock = (product['stock'] as num? ?? 0).toDouble();
-                      final minStock = (product['min_stock'] as num? ?? 0).toDouble();
+                      final minStock =
+                          (product['min_stock'] as num? ?? 0).toDouble();
                       return Card(
                         child: ListTile(
                           title: Text('${product['name']}'),
-                          subtitle: Text('SKU ${product['sku'] ?? '—'} • Minimum ${minStock.toStringAsFixed(2)}'),
-                          leading: Icon(stock <= minStock ? Icons.warning_amber : Icons.inventory_2_outlined),
+                          subtitle: Text(
+                              'SKU ${product['sku'] ?? '—'} • Minimum ${minStock.toStringAsFixed(2)}'),
+                          leading: Icon(stock <= minStock
+                              ? Icons.warning_amber
+                              : Icons.inventory_2_outlined),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(stock.toStringAsFixed(2), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-                              IconButton(onPressed: () => adjust(product), icon: const Icon(Icons.tune), tooltip: 'Adjust stock'),
+                              Text(stock.toStringAsFixed(2),
+                                  style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700)),
+                              IconButton(
+                                  onPressed: () => adjust(product),
+                                  icon: const Icon(Icons.tune),
+                                  tooltip: 'Adjust stock'),
                             ],
                           ),
                         ),
