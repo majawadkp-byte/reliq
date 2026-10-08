@@ -31,10 +31,12 @@ class ReliqLoadingState extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(message, style: const TextStyle(fontWeight: FontWeight.w800)),
+              Text(message,
+                  style: const TextStyle(fontWeight: FontWeight.w800)),
               if (detail != null && detail!.trim().isNotEmpty) ...[
                 const SizedBox(height: 3),
-                Text(detail!, style: const TextStyle(color: V3Style.muted, fontSize: 12)),
+                Text(detail!,
+                    style: const TextStyle(color: V3Style.muted, fontSize: 12)),
               ],
             ],
           ),
@@ -45,7 +47,8 @@ class ReliqLoadingState extends StatelessWidget {
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 520),
-        child: Card(child: Padding(padding: const EdgeInsets.all(20), child: body)),
+        child: Card(
+            child: Padding(padding: const EdgeInsets.all(20), child: body)),
       ),
     );
   }
@@ -57,7 +60,8 @@ void showReliqWorkingSnack(BuildContext context, String message) {
   messenger.showSnackBar(SnackBar(
     duration: const Duration(days: 1),
     content: Row(children: [
-      const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+      const SizedBox.square(
+          dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)),
       const SizedBox(width: 12),
       Expanded(child: Text(message)),
     ]),

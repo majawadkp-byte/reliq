@@ -26,18 +26,39 @@ Future<void> main() async {
   }
   try {
     await AppDatabase.instance.open();
-  } catch (e) {
-    final rollbackLaunched = await UpdateManager.instance.launchRollbackAfterFailedUpdate(e.toString());
+  } catch (e, st) {
+    final rollbackLaunched = await UpdateManager.instance
+        .launchRollbackAfterFailedUpdate(e.toString());
     if (rollbackLaunched) {
       await Future<void>.delayed(const Duration(milliseconds: 350));
       exit(0);
     }
-    rethrow;
+    // Never leave customers with an unexplained black window when startup or a
+    // schema migration fails. Render a diagnostic screen so the database is not
+    // touched further and support can see the real startup error.
+    if (desktop) {
+      const failureOptions = WindowOptions(
+        size: Size(980, 680),
+        center: true,
+        backgroundColor: Color(0xFF0B2024),
+        skipTaskbar: false,
+      );
+      unawaited(windowManager.waitUntilReadyToShow(failureOptions, () async {
+        await windowManager.show();
+        await windowManager.focus();
+      }));
+    }
+    runApp(_StartupFailureApp(error: e, stackTrace: st));
+    return;
   }
-  try { await UpdateManager.instance.markStartupComplete(); } catch (_) {}
+  try {
+    await UpdateManager.instance.markStartupComplete();
+  } catch (_) {}
   SyncService.instance.startPeriodic();
   final startupSettings = await AppDatabase.instance.settings();
-  final initialTheme = (startupSettings['theme_mode'] ?? 'Light') == 'Dark' ? ThemeMode.dark : ThemeMode.light;
+  final initialTheme = (startupSettings['theme_mode'] ?? 'Light') == 'Dark'
+      ? ThemeMode.dark
+      : ThemeMode.light;
   if (desktop) {
     const options = WindowOptions(
       size: Size(1280, 820),
@@ -63,9 +84,82 @@ Future<void> main() async {
   }));
   unawaited(Future<void>.delayed(const Duration(seconds: 8), () async {
     await SchedulerBinding.instance.scheduleTask<void>(() async {
-      try { await AppDatabase.instance.maybeAutomaticBackup(); } catch (_) {}
+      try {
+        await AppDatabase.instance.maybeAutomaticBackup();
+      } catch (_) {}
     }, Priority.idle, debugLabel: 'RELIQ automatic backup');
   }));
+}
+
+class _StartupFailureApp extends StatelessWidget {
+  final Object error;
+  final StackTrace stackTrace;
+
+  const _StartupFailureApp({required this.error, required this.stackTrace});
+
+  @override
+  Widget build(BuildContext context) {
+    final detail = error.toString().replaceFirst('Exception: ', '');
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.dark(useMaterial3: true),
+      home: Scaffold(
+        backgroundColor: const Color(0xFF0B2024),
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 760),
+              child: Padding(
+                padding: const EdgeInsets.all(28),
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.error_outline,
+                                color: Colors.orangeAccent),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Reliq could not finish startup',
+                                style: TextStyle(
+                                    fontSize: 22, fontWeight: FontWeight.w800),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Your business database has not been deleted. Copy the error below and send it to support before retrying migrations or replacing the database.',
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          constraints: const BoxConstraints(maxHeight: 330),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.black26,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: SingleChildScrollView(
+                            child: SelectableText('$detail\n\n$stackTrace'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class V4App extends StatefulWidget {
@@ -94,14 +188,16 @@ class _V4AppState extends State<V4App> {
     return false;
   }
 
-
   ThemeData _theme(Brightness brightness) {
     final dark = brightness == Brightness.dark;
-    final primaryText = dark ? const Color(0xFFF5F8F7) : const Color(0xFF1C2D30);
-    final secondaryText = dark ? const Color(0xFFB8C9C8) : const Color(0xFF66777A);
+    final primaryText =
+        dark ? const Color(0xFFF5F8F7) : const Color(0xFF1C2D30);
+    final secondaryText =
+        dark ? const Color(0xFFB8C9C8) : const Color(0xFF66777A);
     final mutedText = dark ? const Color(0xFF829A99) : const Color(0xFF66777A);
     final surface = dark ? const Color(0xD9162B2E) : const Color(0xE8FFFFFF);
-    final surfaceStrong = dark ? const Color(0xF20B2024) : const Color(0xF7FFFFFF);
+    final surfaceStrong =
+        dark ? const Color(0xF20B2024) : const Color(0xF7FFFFFF);
     final border = dark ? const Color(0x2EFFFFFF) : const Color(0xFFDDE5E6);
     final inputFill = dark ? const Color(0xA60A1E22) : const Color(0xD9FFFFFF);
     // Lime is the brand/action colour, but it is not a readable generic UI
@@ -114,19 +210,25 @@ class _V4AppState extends State<V4App> {
       brightness: brightness,
       primary: semanticPrimary,
       onPrimary: onSemanticPrimary,
-      primaryContainer: dark ? const Color(0xFF35430A) : const Color(0xFFDDEDE8),
-      onPrimaryContainer: dark ? const Color(0xFFF0FFC2) : const Color(0xFF173B36),
+      primaryContainer:
+          dark ? const Color(0xFF35430A) : const Color(0xFFDDEDE8),
+      onPrimaryContainer:
+          dark ? const Color(0xFFF0FFC2) : const Color(0xFF173B36),
       secondary: const Color(0xFF11908C),
       onSecondary: dark ? Colors.white : const Color(0xFF092421),
-      secondaryContainer: dark ? const Color(0xFF173B39) : const Color(0xFFD9EFEB),
-      onSecondaryContainer: dark ? const Color(0xFFD9EFEB) : const Color(0xFF102C2A),
+      secondaryContainer:
+          dark ? const Color(0xFF173B39) : const Color(0xFFD9EFEB),
+      onSecondaryContainer:
+          dark ? const Color(0xFFD9EFEB) : const Color(0xFF102C2A),
       error: V3Style.danger,
       onError: Colors.white,
       errorContainer: dark ? const Color(0xFF4B1E24) : const Color(0xFFF9DADD),
-      onErrorContainer: dark ? const Color(0xFFFFDADD) : const Color(0xFF4B1E24),
+      onErrorContainer:
+          dark ? const Color(0xFFFFDADD) : const Color(0xFF4B1E24),
       surface: surface,
       onSurface: primaryText,
-      surfaceContainerHighest: dark ? const Color(0xFF20373A) : const Color(0xFFE1EAE7),
+      surfaceContainerHighest:
+          dark ? const Color(0xFF20373A) : const Color(0xFFE1EAE7),
       onSurfaceVariant: secondaryText,
       outline: border,
       outlineVariant: border.withValues(alpha: .72),
@@ -153,148 +255,274 @@ class _V4AppState extends State<V4App> {
         color: surface,
         surfaceTintColor: Colors.transparent,
         shadowColor: dark ? Colors.black38 : const Color(0x220A2929),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(V3Style.radiusLg), side: BorderSide(color: border)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(V3Style.radiusLg),
+            side: BorderSide(color: border)),
       ),
-      appBarTheme: AppBarTheme(elevation: 0, backgroundColor: surfaceStrong, foregroundColor: primaryText, surfaceTintColor: Colors.transparent),
+      appBarTheme: AppBarTheme(
+          elevation: 0,
+          backgroundColor: surfaceStrong,
+          foregroundColor: primaryText,
+          surfaceTintColor: Colors.transparent),
       dialogTheme: DialogThemeData(
         elevation: 24,
         backgroundColor: surfaceStrong,
         surfaceTintColor: Colors.transparent,
         shadowColor: Colors.black45,
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22), side: BorderSide(color: border)),
-        titleTextStyle: TextStyle(color: primaryText, fontSize: 19, fontWeight: FontWeight.w800, letterSpacing: -.2),
-        contentTextStyle: TextStyle(color: primaryText, fontSize: 13, height: 1.4),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+            side: BorderSide(color: border)),
+        titleTextStyle: TextStyle(
+            color: primaryText,
+            fontSize: 19,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -.2),
+        contentTextStyle:
+            TextStyle(color: primaryText, fontSize: 13, height: 1.4),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: inputFill,
         isDense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         labelStyle: TextStyle(color: secondaryText, fontSize: 12),
-        floatingLabelStyle: TextStyle(color: dark ? V3Style.lime : const Color(0xFF11908C), fontWeight: FontWeight.w800),
+        floatingLabelStyle: TextStyle(
+            color: dark ? V3Style.lime : const Color(0xFF11908C),
+            fontWeight: FontWeight.w800),
         hintStyle: TextStyle(color: mutedText, fontSize: 12),
         prefixIconColor: secondaryText,
         suffixIconColor: secondaryText,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: border)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: dark ? V3Style.lime : const Color(0xFF11908C), width: 1.7)),
-        errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: V3Style.danger)),
-        focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: V3Style.danger, width: 1.5)),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: border)),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+                color: dark ? V3Style.lime : const Color(0xFF11908C),
+                width: 1.7)),
+        errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: V3Style.danger)),
+        focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: V3Style.danger, width: 1.5)),
       ),
-      filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(
+      filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
         backgroundColor: semanticPrimary,
         foregroundColor: onSemanticPrimary,
-        disabledBackgroundColor: dark ? const Color(0xFF43504B) : const Color(0xFFDDE4DE),
-        disabledForegroundColor: dark ? const Color(0xFF94A29D) : const Color(0xFF87918C),
+        disabledBackgroundColor:
+            dark ? const Color(0xFF43504B) : const Color(0xFFDDE4DE),
+        disabledForegroundColor:
+            dark ? const Color(0xFF94A29D) : const Color(0xFF87918C),
         minimumSize: const Size(0, 42),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
       )),
-      outlinedButtonTheme: OutlinedButtonThemeData(style: OutlinedButton.styleFrom(
+      outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
         minimumSize: const Size(0, 42),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         foregroundColor: primaryText,
-        backgroundColor: dark ? const Color(0x20FFFFFF) : const Color(0x8AFFFFFF),
+        backgroundColor:
+            dark ? const Color(0x20FFFFFF) : const Color(0x8AFFFFFF),
         side: BorderSide(color: border),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
       )),
-      textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(
+      textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
         foregroundColor: dark ? V3Style.lime : const Color(0xFF11908C),
         padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         textStyle: const TextStyle(fontWeight: FontWeight.w700),
       )),
-      iconButtonTheme: IconButtonThemeData(style: IconButton.styleFrom(
+      iconButtonTheme: IconButtonThemeData(
+          style: IconButton.styleFrom(
         foregroundColor: primaryText,
-        minimumSize: const Size(38, 38), iconSize: 19,
+        minimumSize: const Size(38, 38),
+        iconSize: 19,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
       )),
       chipTheme: ChipThemeData(
-        backgroundColor: dark ? const Color(0x661D3638) : const Color(0xBDF5F8F6),
+        backgroundColor:
+            dark ? const Color(0x661D3638) : const Color(0xBDF5F8F6),
         selectedColor: semanticPrimary.withValues(alpha: dark ? .20 : .14),
-        labelStyle: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: primaryText),
+        labelStyle: TextStyle(
+            fontSize: 11.5, fontWeight: FontWeight.w700, color: primaryText),
         padding: const EdgeInsets.symmetric(horizontal: 6),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)), side: BorderSide(color: border),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+        side: BorderSide(color: border),
       ),
       listTileTheme: ListTileThemeData(
-        textColor: primaryText, iconColor: secondaryText, dense: true, minTileHeight: 48,
+        textColor: primaryText,
+        iconColor: secondaryText,
+        dense: true,
+        minTileHeight: 48,
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
       ),
       dataTableTheme: DataTableThemeData(
-        headingRowHeight: 44, dataRowMinHeight: 50, dataRowMaxHeight: 62, horizontalMargin: 14, columnSpacing: 18,
-        headingRowColor: WidgetStatePropertyAll(dark ? const Color(0xB81A3335) : const Color(0xDCF1F5F2)),
-        headingTextStyle: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: .45, color: secondaryText),
-        dataTextStyle: TextStyle(fontSize: 12, color: primaryText), dividerThickness: .7,
+        headingRowHeight: 44,
+        dataRowMinHeight: 50,
+        dataRowMaxHeight: 62,
+        horizontalMargin: 14,
+        columnSpacing: 18,
+        headingRowColor: WidgetStatePropertyAll(
+            dark ? const Color(0xB81A3335) : const Color(0xDCF1F5F2)),
+        headingTextStyle: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+            letterSpacing: .45,
+            color: secondaryText),
+        dataTextStyle: TextStyle(fontSize: 12, color: primaryText),
+        dividerThickness: .7,
       ),
       dropdownMenuTheme: DropdownMenuThemeData(
         textStyle: TextStyle(color: primaryText, fontSize: 13),
         inputDecorationTheme: InputDecorationTheme(
-          filled: true, fillColor: inputFill,
+          filled: true,
+          fillColor: inputFill,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: border)),
+          enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: border)),
         ),
         menuStyle: MenuStyle(
-          backgroundColor: WidgetStatePropertyAll(surfaceStrong), surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+          backgroundColor: WidgetStatePropertyAll(surfaceStrong),
+          surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
           elevation: const WidgetStatePropertyAll(16),
-          shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: border))),
+          shape: WidgetStatePropertyAll(RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: BorderSide(color: border))),
         ),
       ),
       popupMenuTheme: PopupMenuThemeData(
-        color: surfaceStrong, surfaceTintColor: Colors.transparent, textStyle: TextStyle(color: primaryText, fontSize: 13), elevation: 16,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: border)),
+        color: surfaceStrong,
+        surfaceTintColor: Colors.transparent,
+        textStyle: TextStyle(color: primaryText, fontSize: 13),
+        elevation: 16,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(color: border)),
       ),
-      menuTheme: MenuThemeData(style: MenuStyle(
+      menuTheme: MenuThemeData(
+          style: MenuStyle(
         backgroundColor: WidgetStatePropertyAll(surfaceStrong),
-        surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent), elevation: const WidgetStatePropertyAll(16),
-        padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(vertical: 6)),
-        shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: border))),
+        surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+        elevation: const WidgetStatePropertyAll(16),
+        padding:
+            const WidgetStatePropertyAll(EdgeInsets.symmetric(vertical: 6)),
+        shape: WidgetStatePropertyAll(RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(color: border))),
       )),
       switchTheme: SwitchThemeData(
-        trackColor: WidgetStateProperty.resolveWith((states) => states.contains(WidgetState.selected) ? semanticPrimary.withValues(alpha: .55) : border),
-        thumbColor: WidgetStateProperty.resolveWith((states) => states.contains(WidgetState.selected) ? semanticPrimary : (dark ? const Color(0xFFD3E0E9) : Colors.white)),
+        trackColor: WidgetStateProperty.resolveWith((states) =>
+            states.contains(WidgetState.selected)
+                ? semanticPrimary.withValues(alpha: .55)
+                : border),
+        thumbColor: WidgetStateProperty.resolveWith((states) =>
+            states.contains(WidgetState.selected)
+                ? semanticPrimary
+                : (dark ? const Color(0xFFD3E0E9) : Colors.white)),
       ),
-      checkboxTheme: CheckboxThemeData(fillColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? semanticPrimary : null), checkColor: WidgetStatePropertyAll(onSemanticPrimary), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)), side: BorderSide(color: secondaryText)),
-      radioTheme: RadioThemeData(fillColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? semanticPrimary : secondaryText)),
+      checkboxTheme: CheckboxThemeData(
+          fillColor: WidgetStateProperty.resolveWith(
+              (s) => s.contains(WidgetState.selected) ? semanticPrimary : null),
+          checkColor: WidgetStatePropertyAll(onSemanticPrimary),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+          side: BorderSide(color: secondaryText)),
+      radioTheme: RadioThemeData(
+          fillColor: WidgetStateProperty.resolveWith((s) =>
+              s.contains(WidgetState.selected)
+                  ? semanticPrimary
+                  : secondaryText)),
       tabBarTheme: TabBarThemeData(
-        labelColor: dark ? V3Style.lime : const Color(0xFF11908C), unselectedLabelColor: secondaryText,
-        labelStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800), unselectedLabelStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
-        indicatorColor: dark ? V3Style.lime : const Color(0xFF11908C), dividerColor: border,
+        labelColor: dark ? V3Style.lime : const Color(0xFF11908C),
+        unselectedLabelColor: secondaryText,
+        labelStyle:
+            const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800),
+        unselectedLabelStyle:
+            const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+        indicatorColor: dark ? V3Style.lime : const Color(0xFF11908C),
+        dividerColor: border,
       ),
       snackBarTheme: SnackBarThemeData(
-        behavior: SnackBarBehavior.floating, backgroundColor: dark ? const Color(0xF21A3335) : const Color(0xF510282B),
-        contentTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), insetPadding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor:
+            dark ? const Color(0xF21A3335) : const Color(0xF510282B),
+        contentTextStyle:
+            const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        insetPadding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
       ),
       tooltipTheme: TooltipThemeData(
-        decoration: BoxDecoration(color: dark ? const Color(0xFFF0F5F3) : const Color(0xFF1C2D30), borderRadius: BorderRadius.circular(8)),
-        textStyle: TextStyle(color: dark ? const Color(0xFF1C2D30) : Colors.white, fontSize: 11, fontWeight: FontWeight.w600), waitDuration: const Duration(milliseconds: 450),
+        decoration: BoxDecoration(
+            color: dark ? const Color(0xFFF0F5F3) : const Color(0xFF1C2D30),
+            borderRadius: BorderRadius.circular(8)),
+        textStyle: TextStyle(
+            color: dark ? const Color(0xFF1C2D30) : Colors.white,
+            fontSize: 11,
+            fontWeight: FontWeight.w600),
+        waitDuration: const Duration(milliseconds: 450),
       ),
-      progressIndicatorTheme: ProgressIndicatorThemeData(color: semanticPrimary),
+      progressIndicatorTheme:
+          ProgressIndicatorThemeData(color: semanticPrimary),
       dividerTheme: DividerThemeData(color: border, thickness: .7, space: 1),
       scrollbarTheme: ScrollbarThemeData(
-        thumbVisibility: const WidgetStatePropertyAll(false), thickness: const WidgetStatePropertyAll(7), radius: const Radius.circular(99),
-        thumbColor: WidgetStateProperty.resolveWith((states) => (states.contains(WidgetState.hovered) ? V3Style.lime : secondaryText).withValues(alpha: .46)),
+        thumbVisibility: const WidgetStatePropertyAll(false),
+        thickness: const WidgetStatePropertyAll(7),
+        radius: const Radius.circular(99),
+        thumbColor: WidgetStateProperty.resolveWith((states) =>
+            (states.contains(WidgetState.hovered)
+                    ? V3Style.lime
+                    : secondaryText)
+                .withValues(alpha: .46)),
       ),
-      textSelectionTheme: TextSelectionThemeData(cursorColor: semanticPrimary, selectionColor: semanticPrimary.withValues(alpha: .22), selectionHandleColor: semanticPrimary),
-      textTheme: ThemeData(brightness: brightness).textTheme.apply(bodyColor: primaryText, displayColor: primaryText).copyWith(
-        headlineSmall: TextStyle(fontSize: 23, fontWeight: FontWeight.w800, letterSpacing: -.35, color: primaryText),
-        titleLarge: TextStyle(fontSize: 19, fontWeight: FontWeight.w800, letterSpacing: -.2, color: primaryText),
-        titleMedium: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700, color: primaryText),
-        bodyMedium: TextStyle(fontSize: 13, height: 1.35, color: primaryText),
-        bodySmall: TextStyle(fontSize: 11.5, height: 1.32, color: secondaryText),
-        labelLarge: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: primaryText),
-      ),
+      textSelectionTheme: TextSelectionThemeData(
+          cursorColor: semanticPrimary,
+          selectionColor: semanticPrimary.withValues(alpha: .22),
+          selectionHandleColor: semanticPrimary),
+      textTheme: ThemeData(brightness: brightness)
+          .textTheme
+          .apply(bodyColor: primaryText, displayColor: primaryText)
+          .copyWith(
+            headlineSmall: TextStyle(
+                fontSize: 23,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -.35,
+                color: primaryText),
+            titleLarge: TextStyle(
+                fontSize: 19,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -.2,
+                color: primaryText),
+            titleMedium: TextStyle(
+                fontSize: 15.5,
+                fontWeight: FontWeight.w700,
+                color: primaryText),
+            bodyMedium:
+                TextStyle(fontSize: 13, height: 1.35, color: primaryText),
+            bodySmall:
+                TextStyle(fontSize: 11.5, height: 1.32, color: secondaryText),
+            labelLarge: TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w700, color: primaryText),
+          ),
     );
   }
 
   Future<void> _onAuthenticated(AuthUser user) async {
     final values = await AppDatabase.instance.settings();
-    _idleMinutes = (int.tryParse(values['session_timeout_minutes'] ?? '30') ?? 30).clamp(0, 1440).toInt();
+    _idleMinutes =
+        (int.tryParse(values['session_timeout_minutes'] ?? '30') ?? 30)
+            .clamp(0, 1440)
+            .toInt();
     if (!mounted) return;
     setState(() => currentUser = user);
     _armIdleTimer();
@@ -328,8 +556,10 @@ class _V4AppState extends State<V4App> {
   }
 
   void toggleTheme() {
-    setState(() => mode = mode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark);
-    AppDatabase.instance.saveSettings({'theme_mode': mode == ThemeMode.dark ? 'Dark' : 'Light'});
+    setState(
+        () => mode = mode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark);
+    AppDatabase.instance.saveSettings(
+        {'theme_mode': mode == ThemeMode.dark ? 'Dark' : 'Light'});
   }
 
   @override

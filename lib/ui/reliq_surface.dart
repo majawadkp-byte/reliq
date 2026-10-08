@@ -6,7 +6,8 @@ import 'package:flutter/material.dart';
 class ReliqSurface {
   ReliqSurface._();
 
-  static bool isDark(BuildContext context) => Theme.of(context).brightness == Brightness.dark;
+  static bool isDark(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark;
   static Color glass(BuildContext context, {double? opacity}) => isDark(context)
       ? const Color(0xFF0C2226).withValues(alpha: opacity ?? .78)
       : const Color(0xFFFFFFFF).withValues(alpha: opacity ?? .88);
@@ -16,15 +17,20 @@ class ReliqSurface {
   static Color glassBorder(BuildContext context) => isDark(context)
       ? Colors.white.withValues(alpha: .12)
       : const Color(0xFFDDE5E6).withValues(alpha: .95);
-  static Color textPrimary(BuildContext context) => isDark(context) ? const Color(0xFFF5F8F7) : const Color(0xFF1C2D30);
-  static Color textSecondary(BuildContext context) => isDark(context) ? const Color(0xFFB8C9C8) : const Color(0xFF66777A);
-  static Color textMuted(BuildContext context) => isDark(context) ? const Color(0xFF829A99) : const Color(0xFF66777A);
+  static Color textPrimary(BuildContext context) =>
+      isDark(context) ? const Color(0xFFF5F8F7) : const Color(0xFF1C2D30);
+  static Color textSecondary(BuildContext context) =>
+      isDark(context) ? const Color(0xFFB8C9C8) : const Color(0xFF66777A);
+  static Color textMuted(BuildContext context) =>
+      isDark(context) ? const Color(0xFF829A99) : const Color(0xFF66777A);
   static Color input(BuildContext context) => isDark(context)
       ? const Color(0xFF071A1E).withValues(alpha: .54)
       : const Color(0xFFFFFFFF).withValues(alpha: .90);
 
-  static const BoxShadow darkShadow = BoxShadow(color: Color(0x42000000), blurRadius: 30, offset: Offset(0, 14));
-  static const BoxShadow lightShadow = BoxShadow(color: Color(0x160A2929), blurRadius: 30, offset: Offset(0, 14));
+  static const BoxShadow darkShadow = BoxShadow(
+      color: Color(0x42000000), blurRadius: 30, offset: Offset(0, 14));
+  static const BoxShadow lightShadow = BoxShadow(
+      color: Color(0x160A2929), blurRadius: 30, offset: Offset(0, 14));
 }
 
 class ReliqGlass extends StatelessWidget {
@@ -53,7 +59,9 @@ class ReliqGlass extends StatelessWidget {
   Widget build(BuildContext context) {
     final dark = ReliqSurface.isDark(context);
     final decoration = BoxDecoration(
-      color: strong ? ReliqSurface.glassStrong(context) : ReliqSurface.glass(context),
+      color: strong
+          ? ReliqSurface.glassStrong(context)
+          : ReliqSurface.glass(context),
       borderRadius: BorderRadius.circular(radius),
       border: Border.all(color: ReliqSurface.glassBorder(context)),
       boxShadow: [dark ? ReliqSurface.darkShadow : ReliqSurface.lightShadow],
@@ -72,14 +80,20 @@ class ReliqGlass extends StatelessWidget {
                     end: Alignment.bottomRight,
                     colors: dark
                         ? [
-                            Colors.white.withValues(alpha: .10 * reflectionStrength),
-                            Colors.white.withValues(alpha: .015 * reflectionStrength),
-                            const Color(0xFFE1FF05).withValues(alpha: .025 * reflectionStrength),
+                            Colors.white
+                                .withValues(alpha: .10 * reflectionStrength),
+                            Colors.white
+                                .withValues(alpha: .015 * reflectionStrength),
+                            const Color(0xFFE1FF05)
+                                .withValues(alpha: .025 * reflectionStrength),
                           ]
                         : [
-                            Colors.white.withValues(alpha: .72 * reflectionStrength),
-                            Colors.white.withValues(alpha: .08 * reflectionStrength),
-                            const Color(0xFF11908C).withValues(alpha: .018 * reflectionStrength),
+                            Colors.white
+                                .withValues(alpha: .72 * reflectionStrength),
+                            Colors.white
+                                .withValues(alpha: .08 * reflectionStrength),
+                            const Color(0xFF11908C)
+                                .withValues(alpha: .018 * reflectionStrength),
                           ],
                     stops: const [0, .46, 1],
                   ),
@@ -99,7 +113,8 @@ class ReliqGlass extends StatelessWidget {
                   gradient: LinearGradient(
                     colors: [
                       Colors.transparent,
-                      Colors.white.withValues(alpha: (dark ? .30 : .84) * reflectionStrength),
+                      Colors.white.withValues(
+                          alpha: (dark ? .30 : .84) * reflectionStrength),
                       Colors.transparent,
                     ],
                   ),
@@ -113,7 +128,8 @@ class ReliqGlass extends StatelessWidget {
     if (!clip || blur <= 0) return body;
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
-      child: BackdropFilter(filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur), child: body),
+      child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur), child: body),
     );
   }
 }
@@ -146,8 +162,11 @@ class ReliqBrandLockup extends StatelessWidget {
     // explicitly prohibits recolouring or recreating the lockup in another
     // typeface, so the login never synthesizes the wordmark from Text widgets.
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final asset = dark ? 'assets/branding/reliq_logo_white.png' : 'assets/branding/reliq_logo.png';
+    final asset = dark
+        ? 'assets/branding/reliq_logo_white.png'
+        : 'assets/branding/reliq_logo.png';
     final height = compact ? 42.0 : 78.0;
-    return Image.asset(asset, height: height, fit: BoxFit.contain, alignment: Alignment.centerLeft);
+    return Image.asset(asset,
+        height: height, fit: BoxFit.contain, alignment: Alignment.centerLeft);
   }
 }

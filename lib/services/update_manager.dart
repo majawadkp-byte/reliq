@@ -35,11 +35,17 @@ class UpdateInfo {
   factory UpdateInfo.fromJson(Map<String, dynamic> json) => UpdateInfo(
         version: (json['version'] ?? '').toString(),
         build: int.tryParse('${json['build'] ?? 0}') ?? 0,
-        minimumDatabaseVersion: int.tryParse('${json['minimum_database_version'] ?? 0}') ?? 0,
-        targetDatabaseVersion: int.tryParse('${json['target_database_version'] ?? 0}') ?? 0,
+        minimumDatabaseVersion:
+            int.tryParse('${json['minimum_database_version'] ?? 0}') ?? 0,
+        targetDatabaseVersion:
+            int.tryParse('${json['target_database_version'] ?? 0}') ?? 0,
         releaseNotes: (json['release_notes'] ?? '').toString(),
-        packageUrl: (json['package_url'] ?? '').toString().trim().isEmpty ? null : json['package_url'].toString(),
-        packageSha256: (json['package_sha256'] ?? '').toString().trim().isEmpty ? null : json['package_sha256'].toString(),
+        packageUrl: (json['package_url'] ?? '').toString().trim().isEmpty
+            ? null
+            : json['package_url'].toString(),
+        packageSha256: (json['package_sha256'] ?? '').toString().trim().isEmpty
+            ? null
+            : json['package_sha256'].toString(),
         channel: (json['channel'] ?? 'stable').toString(),
       );
 }
@@ -87,31 +93,43 @@ class UpdateManager {
   }
 
   Future<List<Map<String, Object?>>> history({int limit = 25}) async =>
-      AppDatabase.instance.db.query('update_history', orderBy: 'created_at DESC', limit: limit);
+      AppDatabase.instance.db
+          .query('update_history', orderBy: 'created_at DESC', limit: limit);
 
-  Future<UpdateInfo?> checkOnline(String manifestUrl, {String channel = 'stable'}) async {
+  Future<UpdateInfo?> checkOnline(String manifestUrl,
+      {String channel = 'stable'}) async {
     final url = manifestUrl.trim();
     if (url.isEmpty) throw Exception('Update manifest URL is not configured.');
-    final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 20));
-    if (response.statusCode != 200) throw Exception('Update server returned HTTP ${response.statusCode}.');
+    final response =
+        await http.get(Uri.parse(url)).timeout(const Duration(seconds: 20));
+    if (response.statusCode != 200)
+      throw Exception('Update server returned HTTP ${response.statusCode}.');
     final decoded = jsonDecode(response.body);
     if (decoded is! Map) throw Exception('Update manifest is not valid JSON.');
     final map = Map<String, dynamic>.from(decoded.cast<String, dynamic>());
-    if ((map['product'] ?? '').toString() != Brand.name) throw Exception('Update manifest is for a different product.');
+    if ((map['product'] ?? '').toString() != Brand.name)
+      throw Exception('Update manifest is for a different product.');
     final info = UpdateInfo.fromJson(map);
-    if (info.channel.toLowerCase() != channel.toLowerCase() && channel.toLowerCase() == 'stable') return null;
+    if (info.channel.toLowerCase() != channel.toLowerCase() &&
+        channel.toLowerCase() == 'stable') return null;
     await _record('Checked', info.version, 'Online update check succeeded.');
     return _isNewer(info.version, info.build) ? info : null;
   }
 
   Future<String> downloadPackage(UpdateInfo info) async {
     final url = info.packageUrl;
-    if (url == null || url.isEmpty) throw Exception('This update does not include a package download URL.');
-    final response = await http.get(Uri.parse(url)).timeout(const Duration(minutes: 5));
-    if (response.statusCode != 200) throw Exception('Update download failed with HTTP ${response.statusCode}.');
-    final dir = Directory(p.join(await AppDatabase.instance.dataDir, 'updates', 'downloads'));
+    if (url == null || url.isEmpty)
+      throw Exception('This update does not include a package download URL.');
+    final response =
+        await http.get(Uri.parse(url)).timeout(const Duration(minutes: 5));
+    if (response.statusCode != 200)
+      throw Exception(
+          'Update download failed with HTTP ${response.statusCode}.');
+    final dir = Directory(
+        p.join(await AppDatabase.instance.dataDir, 'updates', 'downloads'));
     await dir.create(recursive: true);
-    final path = p.join(dir.path, 'RELIQ_Update_${info.version}_${info.build}.reliq');
+    final path =
+        p.join(dir.path, 'RELIQ_Update_${info.version}_${info.build}.reliq');
     final file = File(path);
     await file.writeAsBytes(response.bodyBytes, flush: true);
     if (info.packageSha256 != null) {
@@ -125,74 +143,104 @@ class UpdateManager {
   }
 
   Future<StagedUpdate> stagePackage(String packagePath) async {
-    await AppDatabase.instance.requirePermission('backup_restore', 'install application updates');
+    await AppDatabase.instance
+        .requirePermission('backup_restore', 'install application updates');
     final source = File(packagePath);
     if (!await source.exists()) throw Exception('Update package not found.');
     final bytes = await source.readAsBytes();
     final archive = ZipDecoder().decodeBytes(bytes, verify: true);
-    final manifestEntry = archive.files.where((f) => f.name == 'manifest.json').firstOrNull;
-    if (manifestEntry == null || !manifestEntry.isFile) throw Exception('Update package is missing manifest.json.');
-    final manifestBytes = Uint8List.fromList(manifestEntry.content as List<int>);
+    final manifestEntry =
+        archive.files.where((f) => f.name == 'manifest.json').firstOrNull;
+    if (manifestEntry == null || !manifestEntry.isFile)
+      throw Exception('Update package is missing manifest.json.');
+    final manifestBytes =
+        Uint8List.fromList(manifestEntry.content as List<int>);
     final decoded = jsonDecode(utf8.decode(manifestBytes));
     if (decoded is! Map) throw Exception('Update manifest is invalid.');
     final manifest = Map<String, dynamic>.from(decoded.cast<String, dynamic>());
-    if ((manifest['format'] ?? '').toString() != packageFormat) throw Exception('Unsupported RELIQ update package format.');
-    if ((manifest['product'] ?? '').toString() != Brand.name) throw Exception('This update package belongs to a different product.');
+    if ((manifest['format'] ?? '').toString() != packageFormat)
+      throw Exception('Unsupported RELIQ update package format.');
+    if ((manifest['product'] ?? '').toString() != Brand.name)
+      throw Exception('This update package belongs to a different product.');
 
     final info = UpdateInfo.fromJson(manifest);
     if (!_isNewer(info.version, info.build)) {
-      throw Exception('This package (${info.version}+${info.build}) is not newer than the installed version ($currentVersion+$currentBuild).');
+      throw Exception(
+          'This package (${info.version}+${info.build}) is not newer than the installed version ($currentVersion+$currentBuild).');
     }
 
     final dbVersion = await currentDatabaseVersion();
-    if (info.minimumDatabaseVersion > 0 && dbVersion < info.minimumDatabaseVersion) {
-      throw Exception('Database version $dbVersion is too old for this update. Minimum required: ${info.minimumDatabaseVersion}.');
+    if (info.minimumDatabaseVersion > 0 &&
+        dbVersion < info.minimumDatabaseVersion) {
+      throw Exception(
+          'Database version $dbVersion is too old for this update. Minimum required: ${info.minimumDatabaseVersion}.');
     }
-    if (info.targetDatabaseVersion > 0 && info.targetDatabaseVersion < dbVersion) {
-      throw Exception('This update targets database version ${info.targetDatabaseVersion}, but this installation already uses version $dbVersion. Downgrade is blocked.');
+    if (info.targetDatabaseVersion > 0 &&
+        info.targetDatabaseVersion < dbVersion) {
+      throw Exception(
+          'This update targets database version ${info.targetDatabaseVersion}, but this installation already uses version $dbVersion. Downgrade is blocked.');
     }
 
     final platforms = manifest['platforms'];
-    if (platforms is! Map) throw Exception('Update package has no platform payloads.');
+    if (platforms is! Map)
+      throw Exception('Update package has no platform payloads.');
     final platformEntryRaw = platforms[platformKey];
-    if (platformEntryRaw is! Map) throw Exception('This package has no $platformKey build.');
-    final platformEntry = Map<String, dynamic>.from(platformEntryRaw.cast<String, dynamic>());
+    if (platformEntryRaw is! Map)
+      throw Exception('This package has no $platformKey build.');
+    final platformEntry =
+        Map<String, dynamic>.from(platformEntryRaw.cast<String, dynamic>());
     final payloadFile = (platformEntry['file'] ?? '').toString();
     final payloadKind = (platformEntry['kind'] ?? '').toString();
     final expectedSha = (platformEntry['sha256'] ?? '').toString();
-    if (payloadFile.isEmpty || payloadKind.isEmpty || expectedSha.isEmpty) throw Exception('Platform payload metadata is incomplete.');
+    if (payloadFile.isEmpty || payloadKind.isEmpty || expectedSha.isEmpty)
+      throw Exception('Platform payload metadata is incomplete.');
 
     final entry = archive.files.where((f) => f.name == payloadFile).firstOrNull;
-    if (entry == null || !entry.isFile) throw Exception('Update payload $payloadFile is missing.');
+    if (entry == null || !entry.isFile)
+      throw Exception('Update payload $payloadFile is missing.');
     final payloadBytes = Uint8List.fromList(entry.content as List<int>);
     final actualSha = sha256.convert(payloadBytes).toString();
-    if (actualSha.toLowerCase() != expectedSha.toLowerCase()) throw Exception('Update payload failed SHA-256 verification.');
+    if (actualSha.toLowerCase() != expectedSha.toLowerCase())
+      throw Exception('Update payload failed SHA-256 verification.');
 
     // Always create a verified safety copy before staging an application update.
-    final backupDir = Directory(p.join(await AppDatabase.instance.dataDir, 'backups', 'pre_update'));
+    final backupDir = Directory(
+        p.join(await AppDatabase.instance.dataDir, 'backups', 'pre_update'));
     await backupDir.create(recursive: true);
-    final backupPath = await AppDatabase.instance.backupTo(backupDir.path, enforcePermission: false);
+    final backupPath = await AppDatabase.instance
+        .backupTo(backupDir.path, enforcePermission: false);
 
-    final staging = Directory(p.join(await AppDatabase.instance.dataDir, 'updates', 'staged', '${info.version}_${info.build}_$platformKey'));
+    final staging = Directory(p.join(await AppDatabase.instance.dataDir,
+        'updates', 'staged', '${info.version}_${info.build}_$platformKey'));
     if (await staging.exists()) await staging.delete(recursive: true);
     await staging.create(recursive: true);
     final payloadPath = p.join(staging.path, p.basename(payloadFile));
     await File(payloadPath).writeAsBytes(payloadBytes, flush: true);
 
-    await AppDatabase.instance.db.insert('app_meta', {'k': 'pending_update_version', 'v': info.version}, conflictAlgorithm: ConflictAlgorithm.replace);
-    await AppDatabase.instance.db.insert('app_meta', {'k': 'pending_update_build', 'v': '${info.build}'}, conflictAlgorithm: ConflictAlgorithm.replace);
-    await AppDatabase.instance.db.insert('app_meta', {'k': 'pending_update_backup', 'v': backupPath}, conflictAlgorithm: ConflictAlgorithm.replace);
-    await _record('Staged', info.version, 'Offline/online package staged for $platformKey. Safety backup: $backupPath');
-    final pendingFile = File(p.join(await AppDatabase.instance.dataDir, 'updates', 'pending_update.json'));
+    await AppDatabase.instance.db.insert(
+        'app_meta', {'k': 'pending_update_version', 'v': info.version},
+        conflictAlgorithm: ConflictAlgorithm.replace);
+    await AppDatabase.instance.db.insert(
+        'app_meta', {'k': 'pending_update_build', 'v': '${info.build}'},
+        conflictAlgorithm: ConflictAlgorithm.replace);
+    await AppDatabase.instance.db.insert(
+        'app_meta', {'k': 'pending_update_backup', 'v': backupPath},
+        conflictAlgorithm: ConflictAlgorithm.replace);
+    await _record('Staged', info.version,
+        'Offline/online package staged for $platformKey. Safety backup: $backupPath');
+    final pendingFile = File(p.join(
+        await AppDatabase.instance.dataDir, 'updates', 'pending_update.json'));
     await pendingFile.parent.create(recursive: true);
-    await pendingFile.writeAsString(jsonEncode({
-      'version': info.version,
-      'build': info.build,
-      'backup_path': backupPath,
-      'staging_directory': staging.path,
-      'platform': platformKey,
-      'staged_at': DateTime.now().toUtc().toIso8601String(),
-    }), flush: true);
+    await pendingFile.writeAsString(
+        jsonEncode({
+          'version': info.version,
+          'build': info.build,
+          'backup_path': backupPath,
+          'staging_directory': staging.path,
+          'platform': platformKey,
+          'staged_at': DateTime.now().toUtc().toIso8601String(),
+        }),
+        flush: true);
 
     return StagedUpdate(
       info: info,
@@ -210,7 +258,8 @@ class UpdateManager {
     } else if (Platform.isMacOS) {
       await _launchMacUpdater(staged);
     } else {
-      throw Exception('Automatic replacement is currently supported on Windows and macOS only.');
+      throw Exception(
+          'Automatic replacement is currently supported on Windows and macOS only.');
     }
     // Give the detached helper a moment to start before this process exits.
     await Future<void>.delayed(const Duration(milliseconds: 350));
@@ -218,14 +267,16 @@ class UpdateManager {
   }
 
   Future<void> _launchWindowsUpdater(StagedUpdate staged) async {
-    if (staged.payloadKind != 'windows_zip') throw Exception('Windows update payload must use kind windows_zip.');
+    if (staged.payloadKind != 'windows_zip')
+      throw Exception('Windows update payload must use kind windows_zip.');
     final payloadBytes = await File(staged.payloadPath).readAsBytes();
     final payloadArchive = ZipDecoder().decodeBytes(payloadBytes, verify: true);
     final extracted = Directory(p.join(staged.stagingDirectory, 'app'));
     await extracted.create(recursive: true);
     for (final f in payloadArchive.files) {
       final safe = _safeRelative(f.name);
-      if (safe == null) throw Exception('Unsafe path in Windows update payload.');
+      if (safe == null)
+        throw Exception('Unsafe path in Windows update payload.');
       final out = p.join(extracted.path, safe);
       if (f.isFile) {
         await File(out).parent.create(recursive: true);
@@ -258,19 +309,26 @@ try {
 } catch {
   ("ERROR: " + \$_.Exception.Message) | Set-Content -Path "$qStatus"
 }
-'''.replaceFirst(r'$pid', '${pid}'));
-    await Process.start('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script.path], mode: ProcessStartMode.detached);
+'''
+        .replaceFirst(r'$pid', '${pid}'));
+    await Process.start('powershell',
+        ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script.path],
+        mode: ProcessStartMode.detached);
   }
 
   Future<void> _launchMacUpdater(StagedUpdate staged) async {
-    if (staged.payloadKind != 'macos_app_tgz') throw Exception('macOS update payload must use kind macos_app_tgz.');
+    if (staged.payloadKind != 'macos_app_tgz')
+      throw Exception('macOS update payload must use kind macos_app_tgz.');
     final extracted = Directory(p.join(staged.stagingDirectory, 'app_payload'));
     await extracted.create(recursive: true);
     final stagedApp = p.join(extracted.path, 'RELIQ Solutions.app');
     final bundle = _currentMacBundlePath();
-    if (bundle == null) throw Exception('Could not determine the installed RELIQ .app bundle path.');
+    if (bundle == null)
+      throw Exception(
+          'Could not determine the installed RELIQ .app bundle path.');
     final statusFile = p.join(staged.stagingDirectory, 'update_status.txt');
-    final previousApp = p.join(staged.stagingDirectory, 'previous_app', 'RELIQ Solutions.app');
+    final previousApp =
+        p.join(staged.stagingDirectory, 'previous_app', 'RELIQ Solutions.app');
     final script = File(p.join(staged.stagingDirectory, 'apply_update.sh'));
     final reopen = p.basename(bundle);
     await script.writeAsString('''#!/bin/zsh
@@ -292,23 +350,37 @@ echo OK > ${_shQuote(statusFile)}
 
     // If installed under /Applications, macOS may require administrator approval.
     final command = _shQuote(script.path);
-    final appleScript = 'do shell script ${_appleScriptQuote(command)} with administrator privileges';
-    await Process.start('osascript', ['-e', appleScript], mode: ProcessStartMode.detached);
+    final appleScript =
+        'do shell script ${_appleScriptQuote(command)} with administrator privileges';
+    await Process.start('osascript', ['-e', appleScript],
+        mode: ProcessStartMode.detached);
     // Keep variable referenced for easier diagnostics in generated packages.
     if (reopen.isEmpty) throw Exception('Invalid application bundle name.');
   }
 
   Future<void> markStartupComplete() async {
     try {
-      final rows = await AppDatabase.instance.db.query('app_meta', where: "k IN ('pending_update_version','pending_update_build')");
-      final values = <String, String>{for (final r in rows) '${r['k']}': '${r['v'] ?? ''}'};
+      final rows = await AppDatabase.instance.db.query('app_meta',
+          where: "k IN ('pending_update_version','pending_update_build')");
+      final values = <String, String>{
+        for (final r in rows) '${r['k']}': '${r['v'] ?? ''}'
+      };
       final pendingVersion = values['pending_update_version'];
       final pendingBuild = int.tryParse(values['pending_update_build'] ?? '');
       if (pendingVersion == currentVersion && pendingBuild == currentBuild) {
-        await _record('Completed', currentVersion, 'Application update completed and database opened successfully.');
-        await AppDatabase.instance.db.delete('app_meta', where: "k IN ('pending_update_version','pending_update_build')");
-        await AppDatabase.instance.db.insert('app_meta', {'k': 'last_successful_app_version', 'v': '$currentVersion+$currentBuild'}, conflictAlgorithm: ConflictAlgorithm.replace);
-        final pendingFile = File(p.join(await AppDatabase.instance.dataDir, 'updates', 'pending_update.json'));
+        await _record('Completed', currentVersion,
+            'Application update completed and database opened successfully.');
+        await AppDatabase.instance.db.delete('app_meta',
+            where: "k IN ('pending_update_version','pending_update_build')");
+        await AppDatabase.instance.db.insert(
+            'app_meta',
+            {
+              'k': 'last_successful_app_version',
+              'v': '$currentVersion+$currentBuild'
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace);
+        final pendingFile = File(p.join(await AppDatabase.instance.dataDir,
+            'updates', 'pending_update.json'));
         if (await pendingFile.exists()) await pendingFile.delete();
       }
     } catch (_) {
@@ -325,24 +397,32 @@ echo OK > ${_shQuote(statusFile)}
       if (raw is! Map) return false;
       final backup = (raw['backup_path'] ?? '').toString();
       final staging = (raw['staging_directory'] ?? '').toString();
-      if (backup.isEmpty || staging.isEmpty || !await File(backup).exists()) return false;
+      if (backup.isEmpty || staging.isEmpty || !await File(backup).exists())
+        return false;
 
       final live = File(p.join(data, 'reliq_solutions.db'));
-      final failedCopy = File(p.join(data, 'failed_update_db_${DateTime.now().millisecondsSinceEpoch}.db'));
+      final failedCopy = File(p.join(data,
+          'failed_update_db_${DateTime.now().millisecondsSinceEpoch}.db'));
       if (await live.exists()) {
-        try { await live.copy(failedCopy.path); } catch (_) {}
+        try {
+          await live.copy(failedCopy.path);
+        } catch (_) {}
       }
       for (final suffix in const ['', '-wal', '-shm']) {
         final f = File('${live.path}$suffix');
         if (await f.exists()) {
-          try { await f.delete(); } catch (_) {}
+          try {
+            await f.delete();
+          } catch (_) {}
         }
       }
       await File(backup).copy(live.path);
 
       final recoveryLog = File(p.join(data, 'updates', 'last_recovery.txt'));
       await recoveryLog.parent.create(recursive: true);
-      await recoveryLog.writeAsString('Database migration/startup failed after update. RELIQ restored the pre-update database and requested application rollback.\n$error\nBackup: $backup\n', flush: true);
+      await recoveryLog.writeAsString(
+          'Database migration/startup failed after update. RELIQ restored the pre-update database and requested application rollback.\n$error\nBackup: $backup\n',
+          flush: true);
 
       if (Platform.isWindows) {
         final previous = p.join(staging, 'previous_app');
@@ -358,7 +438,9 @@ Copy-Item -Path "${_psQuote(previous)}\\*" -Destination "${_psQuote(installDir)}
 "ROLLED BACK" | Set-Content -Path "${_psQuote(p.join(staging, 'update_status.txt'))}"
 Start-Process "${_psQuote(exe)}"
 ''');
-        await Process.start('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script.path], mode: ProcessStartMode.detached);
+        await Process.start('powershell',
+            ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script.path],
+            mode: ProcessStartMode.detached);
         return true;
       }
 
@@ -376,8 +458,10 @@ echo 'ROLLED BACK' > ${_shQuote(p.join(staging, 'update_status.txt'))}
 /usr/bin/open ${_shQuote(bundle)}
 ''');
         await Process.run('chmod', ['+x', script.path]);
-        final appleScript = 'do shell script ${_appleScriptQuote(_shQuote(script.path))} with administrator privileges';
-        await Process.start('osascript', ['-e', appleScript], mode: ProcessStartMode.detached);
+        final appleScript =
+            'do shell script ${_appleScriptQuote(_shQuote(script.path))} with administrator privileges';
+        await Process.start('osascript', ['-e', appleScript],
+            mode: ProcessStartMode.detached);
         return true;
       }
       return false;
@@ -403,8 +487,16 @@ echo 'ROLLED BACK' > ${_shQuote(p.join(staging, 'update_status.txt'))}
   }
 
   int _compareVersions(String a, String b) {
-    final aa = a.split(RegExp(r'[^0-9]+')).where((e) => e.isNotEmpty).map((e) => int.tryParse(e) ?? 0).toList();
-    final bb = b.split(RegExp(r'[^0-9]+')).where((e) => e.isNotEmpty).map((e) => int.tryParse(e) ?? 0).toList();
+    final aa = a
+        .split(RegExp(r'[^0-9]+'))
+        .where((e) => e.isNotEmpty)
+        .map((e) => int.tryParse(e) ?? 0)
+        .toList();
+    final bb = b
+        .split(RegExp(r'[^0-9]+'))
+        .where((e) => e.isNotEmpty)
+        .map((e) => int.tryParse(e) ?? 0)
+        .toList();
     final length = aa.length > bb.length ? aa.length : bb.length;
     for (var i = 0; i < length; i++) {
       final av = i < aa.length ? aa[i] : 0;
@@ -416,13 +508,16 @@ echo 'ROLLED BACK' > ${_shQuote(p.join(staging, 'update_status.txt'))}
 
   String? _safeRelative(String input) {
     final normalized = p.normalize(input.replaceAll('\\', '/'));
-    if (p.isAbsolute(normalized) || normalized == '..' || normalized.startsWith('../')) return null;
+    if (p.isAbsolute(normalized) ||
+        normalized == '..' ||
+        normalized.startsWith('../')) return null;
     return normalized;
   }
 
   String _psQuote(String value) => value.replaceAll("'", "''");
   String _shQuote(String value) => "'${value.replaceAll("'", "'\\''")}'";
-  String _appleScriptQuote(String value) => '"${value.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"';
+  String _appleScriptQuote(String value) =>
+      '"${value.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"';
 
   String? _currentMacBundlePath() {
     var dir = Directory(p.dirname(Platform.resolvedExecutable));

@@ -91,7 +91,9 @@ class BulkProductImportService {
     } else {
       bytes = file.bytes;
     }
-    if (bytes == null) throw Exception('The selected file could not be read. Please choose it again.');
+    if (bytes == null)
+      throw Exception(
+          'The selected file could not be read. Please choose it again.');
     return BulkPickedFile(name: file.name, bytes: bytes);
   }
 
@@ -112,14 +114,71 @@ class BulkProductImportService {
     if (chosen == null) return null;
 
     const sampleRows = <List<String>>[
-      ['Sample Product', '', '', 'General', 'pcs', 'Stocked', '1.250', '2.000', '25', '5', '20', 'A1', 'Sample Supplier', 'NONE', 'no', '1', '1', '1', 'yes', 'yes', 'Active', '', '', 'yes', 'yes', 'no', 'no'],
-      ['Installation Service', '', '', 'Services', 'pcs', 'Service', '0.000', '10.000', '0', '0', '0', '', '', 'NONE', 'no', '0', '1', '1', 'yes', 'no', 'Active', '', '', 'yes', 'yes', 'no', 'no'],
+      [
+        'Sample Product',
+        '',
+        '',
+        'General',
+        'pcs',
+        'Stocked',
+        '1.250',
+        '2.000',
+        '25',
+        '5',
+        '20',
+        'A1',
+        'Sample Supplier',
+        'NONE',
+        'no',
+        '1',
+        '1',
+        '1',
+        'yes',
+        'yes',
+        'Active',
+        '',
+        '',
+        'yes',
+        'yes',
+        'no',
+        'no'
+      ],
+      [
+        'Installation Service',
+        '',
+        '',
+        'Services',
+        'pcs',
+        'Service',
+        '0.000',
+        '10.000',
+        '0',
+        '0',
+        '0',
+        '',
+        '',
+        'NONE',
+        'no',
+        '0',
+        '1',
+        '1',
+        'yes',
+        'no',
+        'Active',
+        '',
+        '',
+        'yes',
+        'yes',
+        'no',
+        'no'
+      ],
     ];
     final b = StringBuffer()..writeln(templateHeaders.join(','));
     for (final row in sampleRows) {
       b.writeln(row.map(_csvCell).join(','));
     }
-    final target = chosen.toLowerCase().endsWith('.csv') ? chosen : '$chosen.csv';
+    final target =
+        chosen.toLowerCase().endsWith('.csv') ? chosen : '$chosen.csv';
     final file = File(target);
     await file.writeAsString(b.toString(), flush: true);
     return file.path;
@@ -134,8 +193,12 @@ class BulkProductImportService {
     }
 
     final headers = rows.first.map(_normaliseHeader).toList();
-    if (!headers.any((h) => const ['product_name', 'product', 'name'].contains(h))) {
-      return const [BulkProductRow(1, {}, 'The template must contain a product_name column.')];
+    if (!headers
+        .any((h) => const ['product_name', 'product', 'name'].contains(h))) {
+      return const [
+        BulkProductRow(
+            1, {}, 'The template must contain a product_name column.')
+      ];
     }
 
     final result = <BulkProductRow>[];
@@ -159,53 +222,113 @@ class BulkProductImportService {
 
       final name = get(const ['product_name', 'product', 'name']);
       final cost = _number(get(const ['cost', 'unit_cost', 'purchase_price']));
-      final price = _number(get(const ['selling_price', 'sell_price', 'price', 'sale_price', 'retail_price', 'selling_rate', 'sales_price']));
-      final opening = _number(get(const ['opening_stock', 'stock', 'opening_qty']));
-      final minStock = _number(get(const ['minimum_stock', 'min_stock', 'reorder_level']));
-      final target = _number(get(const ['target_stock', 'target', 'desired_stock']));
+      final price = _number(get(const [
+        'selling_price',
+        'sell_price',
+        'price',
+        'sale_price',
+        'retail_price',
+        'selling_rate',
+        'sales_price'
+      ]));
+      final opening =
+          _number(get(const ['opening_stock', 'stock', 'opening_qty']));
+      final minStock =
+          _number(get(const ['minimum_stock', 'min_stock', 'reorder_level']));
+      final target =
+          _number(get(const ['target_stock', 'target', 'desired_stock']));
 
       String? error;
       if (name.isEmpty) {
         error = 'Product name is required.';
-      } else if (cost < 0 || price < 0 || opening < 0 || minStock < 0 || target < 0) {
-        error = 'Cost, price and stock values must be valid non-negative numbers.';
+      } else if (cost < 0 ||
+          price < 0 ||
+          opening < 0 ||
+          minStock < 0 ||
+          target < 0) {
+        error =
+            'Cost, price and stock values must be valid non-negative numbers.';
       }
 
-      result.add(BulkProductRow(r + 1, {
-        'name': name,
-        'sku': _nullable(get(const ['sku', 'item_code', 'product_code'])),
-        'external_barcode': _nullable(get(const ['barcode', 'ean', 'upc'])),
-        'category': get(const ['category']).isEmpty ? 'General' : get(const ['category']),
-        'unit': get(const ['unit', 'uom']).isEmpty ? 'pcs' : get(const ['unit', 'uom']),
-        'product_type': _normaliseProductType(get(const ['product_type', 'type'])),
-        'cost': cost,
-        'price': price,
-        'stock': opening,
-        'min_stock': minStock,
-        'target_stock': target,
-        'location': _nullable(get(const ['location', 'bin_location', 'rack'])),
-        'supplier': _nullable(get(const ['supplier', 'supplier_name', 'vendor'])),
-        'tax_code': get(const ['tax_code', 'tax']).isEmpty ? 'NONE' : get(const ['tax_code', 'tax']),
-        'tax_inclusive': _bool(get(const ['tax_inclusive', 'price_includes_tax']), defaultValue: false) ? 1 : 0,
-        'purchase_moq': _number(get(const ['purchase_moq', 'moq'])),
-        'order_multiple': _numberOrDefault(get(const ['order_multiple', 'order_qty_multiple']), 1),
-        'case_pack': _numberOrDefault(get(const ['case_pack', 'pack_size']), 1),
-        'sellable': _bool(get(const ['sellable', 'can_sell']), defaultValue: true) ? 1 : 0,
-        'purchasable': _bool(get(const ['purchasable', 'can_purchase']), defaultValue: true) ? 1 : 0,
-        'lifecycle_status': _normaliseLifecycle(get(const ['lifecycle_status', 'status'])),
-        'replacement_product_id': null,
-        'demand_family': _nullable(get(const ['demand_family', 'equivalent_group'])),
-        'inherit_predecessor_history': _bool(get(const ['inherit_predecessor_history', 'inherit_history']), defaultValue: true) ? 1 : 0,
-        'active': _bool(get(const ['active', 'enabled']), defaultValue: true) ? 1 : 0,
-        'track_batch': _bool(get(const ['track_batch', 'batch']), defaultValue: false) ? 1 : 0,
-        'track_expiry': _bool(get(const ['track_expiry', 'expiry']), defaultValue: false) ? 1 : 0,
-      }, error));
+      result.add(BulkProductRow(
+          r + 1,
+          {
+            'name': name,
+            'sku': _nullable(get(const ['sku', 'item_code', 'product_code'])),
+            'external_barcode': _nullable(get(const ['barcode', 'ean', 'upc'])),
+            'category': get(const ['category']).isEmpty
+                ? 'General'
+                : get(const ['category']),
+            'unit': get(const ['unit', 'uom']).isEmpty
+                ? 'pcs'
+                : get(const ['unit', 'uom']),
+            'product_type':
+                _normaliseProductType(get(const ['product_type', 'type'])),
+            'cost': cost,
+            'price': price,
+            'stock': opening,
+            'min_stock': minStock,
+            'target_stock': target,
+            'location':
+                _nullable(get(const ['location', 'bin_location', 'rack'])),
+            'supplier':
+                _nullable(get(const ['supplier', 'supplier_name', 'vendor'])),
+            'tax_code': get(const ['tax_code', 'tax']).isEmpty
+                ? 'NONE'
+                : get(const ['tax_code', 'tax']),
+            'tax_inclusive': _bool(
+                    get(const ['tax_inclusive', 'price_includes_tax']),
+                    defaultValue: false)
+                ? 1
+                : 0,
+            'purchase_moq': _number(get(const ['purchase_moq', 'moq'])),
+            'order_multiple': _numberOrDefault(
+                get(const ['order_multiple', 'order_qty_multiple']), 1),
+            'case_pack':
+                _numberOrDefault(get(const ['case_pack', 'pack_size']), 1),
+            'sellable':
+                _bool(get(const ['sellable', 'can_sell']), defaultValue: true)
+                    ? 1
+                    : 0,
+            'purchasable': _bool(get(const ['purchasable', 'can_purchase']),
+                    defaultValue: true)
+                ? 1
+                : 0,
+            'lifecycle_status':
+                _normaliseLifecycle(get(const ['lifecycle_status', 'status'])),
+            'replacement_product_id': null,
+            'demand_family':
+                _nullable(get(const ['demand_family', 'equivalent_group'])),
+            'inherit_predecessor_history': _bool(
+                    get(const [
+                      'inherit_predecessor_history',
+                      'inherit_history'
+                    ]),
+                    defaultValue: true)
+                ? 1
+                : 0,
+            'active':
+                _bool(get(const ['active', 'enabled']), defaultValue: true)
+                    ? 1
+                    : 0,
+            'track_batch':
+                _bool(get(const ['track_batch', 'batch']), defaultValue: false)
+                    ? 1
+                    : 0,
+            'track_expiry': _bool(get(const ['track_expiry', 'expiry']),
+                    defaultValue: false)
+                ? 1
+                : 0,
+          },
+          error));
     }
     return result;
   }
 
-  static Future<BulkProductImportResult> importRows(List<BulkProductRow> rows) async {
-    await LicenseManager.instance.requireUsable(entitlement: LicenseEntitlements.bulkTools);
+  static Future<BulkProductImportResult> importRows(
+      List<BulkProductRow> rows) async {
+    await LicenseManager.instance
+        .requireUsable(entitlement: LicenseEntitlements.bulkTools);
     var imported = 0;
     var skipped = 0;
     final errors = <String>[];
@@ -222,7 +345,8 @@ class BulkProductImportService {
 
         if (sku.isNotEmpty) {
           final existing = await AppDatabase.instance.products(search: sku);
-          if (existing.any((p) => (p['sku'] ?? '').toString().toLowerCase() == sku.toLowerCase())) {
+          if (existing.any((p) =>
+              (p['sku'] ?? '').toString().toLowerCase() == sku.toLowerCase())) {
             skipped++;
             errors.add('Row ${row.rowNumber}: SKU "$sku" already exists.');
             continue;
@@ -234,20 +358,24 @@ class BulkProductImportService {
               (p['external_barcode'] ?? '').toString() == barcode ||
               (p['internal_barcode'] ?? '').toString() == barcode)) {
             skipped++;
-            errors.add('Row ${row.rowNumber}: Barcode "$barcode" already exists.');
+            errors.add(
+                'Row ${row.rowNumber}: Barcode "$barcode" already exists.');
             continue;
           }
         }
 
-        await AppDatabase.instance.saveProduct(Map<String, Object?>.from(row.values));
+        await AppDatabase.instance
+            .saveProduct(Map<String, Object?>.from(row.values));
         imported++;
       } catch (e) {
         skipped++;
-        errors.add('Row ${row.rowNumber}: ${e.toString().replaceFirst('Exception: ', '')}');
+        errors.add(
+            'Row ${row.rowNumber}: ${e.toString().replaceFirst('Exception: ', '')}');
       }
     }
 
-    return BulkProductImportResult(imported: imported, skipped: skipped, errors: errors);
+    return BulkProductImportResult(
+        imported: imported, skipped: skipped, errors: errors);
   }
 
   static List<List<String>> _readCsv(String text) {
@@ -294,7 +422,8 @@ class BulkProductImportService {
   }
 
   static String _csvCell(String value) {
-    if (!value.contains(',') && !value.contains('"') && !value.contains('\n')) return value;
+    if (!value.contains(',') && !value.contains('"') && !value.contains('\n'))
+      return value;
     return '"${value.replaceAll('"', '""')}"';
   }
 
@@ -309,12 +438,16 @@ class BulkProductImportService {
     if (v == 'recipe' || v == 'receipe') return 'Recipe';
     if (v == 'combo' || v == 'bundle') return 'Combo';
     if (v == 'service' || v == 'services') return 'Service';
-    if (v == 'non-stocked' || v == 'non stocked' || v == 'nonstocked' || v == 'non-stock' || v == 'nonstock') return 'Non-stocked';
+    if (v == 'non-stocked' ||
+        v == 'non stocked' ||
+        v == 'nonstocked' ||
+        v == 'non-stock' ||
+        v == 'nonstock') return 'Non-stocked';
     return 'Stocked';
   }
 
   static String _normaliseLifecycle(String value) {
-    final v=value.trim().toLowerCase();
+    final v = value.trim().toLowerCase();
     if (v == 'discontinued') return 'Discontinued';
     if (v == 'replaced') return 'Replaced';
     if (v == 'archived' || v == 'inactive') return 'Archived';
@@ -339,5 +472,6 @@ class BulkProductImportService {
     return const ['1', 'true', 'yes', 'y', 'active', 'on'].contains(v);
   }
 
-  static String? _nullable(String value) => value.trim().isEmpty ? null : value.trim();
+  static String? _nullable(String value) =>
+      value.trim().isEmpty ? null : value.trim();
 }

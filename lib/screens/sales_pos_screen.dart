@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../data/app_database.dart';
+import '../services/document_share_service.dart';
 import '../services/print_service.dart';
 import '../services/whatsapp_service.dart';
 import '../ui/v3_style.dart';
@@ -231,7 +233,11 @@ class _SalesPosScreenState extends State<SalesPosScreen> {
     String address = '';
     String creditLimit = '0';
     String termsDays = '0';
+    String groupId = '';
     bool creditAllowed = false;
+
+    final groups = await AppDatabase.instance.customerGroups(activeOnly: true);
+    if (!mounted) return null;
 
     final save = await showDialog<bool>(
       context: context,
@@ -258,6 +264,31 @@ class _SalesPosScreenState extends State<SalesPosScreen> {
                 ]),
                 const SizedBox(height: 10),
                 TextFormField(decoration: const InputDecoration(labelText: 'Address'), onChanged: (v) => address = v),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  initialValue: groupId,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Customer class / pricing group',
+                    helperText: 'Applies the class discount rules configured in Customer Groups.',
+                  ),
+                  items: [
+                    const DropdownMenuItem(
+                      value: '',
+                      child: Text('Standard customer • no pricing group'),
+                    ),
+                    ...groups.map(
+                      (g) => DropdownMenuItem(
+                        value: g['id'].toString(),
+                        child: Text(
+                          '${g['name']} • ${(g['default_discount_pct'] as num? ?? 0).toStringAsFixed(2)}% default',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                  ],
+                  onChanged: (v) => setDialog(() => groupId = v ?? ''),
+                ),
                 const SizedBox(height: 8),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
@@ -292,6 +323,7 @@ class _SalesPosScreenState extends State<SalesPosScreen> {
       'credit_allowed': creditAllowed ? 1 : 0,
       'credit_limit': double.tryParse(creditLimit) ?? 0,
       'terms_days': int.tryParse(termsDays) ?? 0,
+      'group_id': groupId.isEmpty ? null : groupId,
       'active': 1,
     });
     if (!mounted) return id;
@@ -400,6 +432,14 @@ class _SalesPosScreenState extends State<SalesPosScreen> {
       });
 
       final printSettings = await AppDatabase.instance.settings();
+      final saleIdRows = await AppDatabase.instance.db.query(
+        'sales',
+        columns: const ['id'],
+        where: 'no=?',
+        whereArgs: [no],
+        limit: 1,
+      );
+      final saleDocumentId = saleIdRows.isEmpty ? no : saleIdRows.first['id'].toString();
       final configuredAction = PrintService.actionFromSetting(printSettings['sales_print_action']);
       final configuredPrinter = printSettings['sales_printer'] ?? '';
 
@@ -434,7 +474,26 @@ class _SalesPosScreenState extends State<SalesPosScreen> {
       }
 
       final customerPhone = (customer?['whatsapp'] ?? customer?['phone'] ?? '').toString().trim();
+      final customerEmail = (customer?['email'] ?? '').toString().trim();
       final canMessage = customerPhone.isNotEmpty;
+      final canEmail = customerEmail.isNotEmpty;
+
+      Future<File> prepareSharePdf() => PrintService.prepareSaleReceiptPdf(
+        saleNo: no,
+        items: itemSnapshot,
+        subtotal: currentSubtotal,
+        itemDiscount: currentItemDiscount,
+        discount: currentDiscount,
+        tax: currentTax,
+        delivery: currentDelivery,
+        other: currentOther,
+        total: currentTotal,
+        paid: safePaid,
+        balance: currentBalance,
+        paymentMethod: currentMethod,
+        customerName: customerName,
+      );
+
       final action = await showDialog<String>(
         context: context,
         barrierDismissible: true,
@@ -448,12 +507,15 @@ class _SalesPosScreenState extends State<SalesPosScreen> {
             _dialogMoney('Paid', safePaid),
             if (changeDue > 0) _dialogMoney('Change due', changeDue),
             if (currentBalance > 0) _dialogMoney('Balance due', currentBalance),
-            if (!canMessage) ...[
+            if (!canMessage || !canEmail) ...[
               const SizedBox(height: 10),
               Text(
                 customer == null
-                    ? 'Select a customer with a saved WhatsApp/phone number to send the invoice message.'
-                    : 'This customer has no WhatsApp/phone number saved.',
+                    ? 'Select a customer with saved contact details to share the invoice.'
+                    : [
+                        if (!canMessage) 'No WhatsApp/phone number',
+                        if (!canEmail) 'No email address',
+                      ].join(' • '),
                 style: TextStyle(fontSize: 11.5, color: Theme.of(dialogContext).colorScheme.onSurfaceVariant),
               ),
             ],
@@ -466,9 +528,19 @@ class _SalesPosScreenState extends State<SalesPosScreen> {
               OutlinedButton.icon(onPressed: () => Navigator.pop(dialogContext, 'direct'), icon: const Icon(Icons.print_outlined, size: 17), label: const Text('Print Directly')),
             ],
             OutlinedButton.icon(
+              onPressed: () => Navigator.pop(dialogContext, 'save'),
+              icon: const Icon(Icons.download_outlined, size: 17),
+              label: const Text('Save PDF'),
+            ),
+            OutlinedButton.icon(
               onPressed: canMessage ? () => Navigator.pop(dialogContext, 'message') : null,
               icon: const Icon(Icons.chat_outlined, size: 17),
-              label: const Text('Send Message'),
+              label: const Text('WhatsApp'),
+            ),
+            OutlinedButton.icon(
+              onPressed: canEmail ? () => Navigator.pop(dialogContext, 'email') : null,
+              icon: const Icon(Icons.email_outlined, size: 17),
+              label: const Text('Email PDF'),
             ),
             FilledButton.icon(onPressed: () => Navigator.pop(dialogContext, 'new'), icon: const Icon(Icons.add_shopping_cart_outlined, size: 17), label: const Text('New Sale')),
           ],
@@ -484,6 +556,19 @@ class _SalesPosScreenState extends State<SalesPosScreen> {
         } catch (e) {
           if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Document output failed: ${e.toString().replaceFirst('Exception: ', '')}')));
         }
+      } else if (action == 'save') {
+        try {
+          final attachment = await prepareSharePdf();
+          final savedPath = await DocumentShareService.savePdfAs(
+            attachment,
+            suggestedFileName: 'Invoice_$no.pdf',
+          );
+          if (savedPath != null && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Invoice PDF saved to $savedPath')));
+          }
+        } catch (e) {
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not save invoice PDF: ${e.toString().replaceFirst('Exception: ', '')}')));
+        }
       } else if (action == 'message') {
         try {
           final message = WhatsAppService.invoiceMessage(printSettings, {
@@ -491,14 +576,59 @@ class _SalesPosScreenState extends State<SalesPosScreen> {
             'no': no,
             'total': currentTotal,
           });
-          await WhatsAppService.openChat(
+          final shareResult = await WhatsAppService.shareDocument(
+            settings: printSettings,
             phone: customerPhone,
             message: message,
-            defaultCountryCode: printSettings['whatsapp_country_code'] ?? '',
+            prepareAttachment: prepareSharePdf,
           );
-          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('WhatsApp opened with the invoice message ready to send.')));
+          if (customer != null) {
+            await AppDatabase.instance.logCommunication(
+              partyType: 'Customer',
+              partyId: customer['id'].toString(),
+              channel: 'WhatsApp',
+              documentType: 'Invoice',
+              documentId: saleDocumentId,
+              action: shareResult.auditAction,
+            );
+          }
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(shareResult.userMessage('Invoice')),
+            ));
+          }
         } catch (e) {
-          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not open WhatsApp: ${e.toString().replaceFirst('Exception: ', '')}')));
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not prepare WhatsApp invoice: ${e.toString().replaceFirst('Exception: ', '')}')));
+        }
+      } else if (action == 'email') {
+        try {
+          final attachment = await prepareSharePdf();
+          final businessName = (printSettings['business_name'] ?? 'RELIQ Solutions').trim();
+          final currency = (printSettings['currency'] ?? 'KWD').trim();
+          final decimals = int.tryParse(printSettings['currency_decimals'] ?? '3') ?? 3;
+          await DocumentShareService.openEmailDraftWithAttachment(
+            recipient: customerEmail,
+            subject: 'Invoice $no - $businessName',
+            body: 'Hello $customerName,\n\nPlease find invoice $no attached.\nTotal: $currency ${currentTotal.toStringAsFixed(decimals)}\n\nThank you,\n$businessName',
+            attachment: attachment,
+          );
+          if (customer != null) {
+            await AppDatabase.instance.logCommunication(
+              partyType: 'Customer',
+              partyId: customer['id'].toString(),
+              channel: 'Email',
+              documentType: 'Invoice',
+              documentId: saleDocumentId,
+              action: 'PDF prepared / opened',
+            );
+          }
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Email draft opened and the invoice PDF is ready in Finder/Explorer. Attach it, then send.'),
+            ));
+          }
+        } catch (e) {
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not prepare invoice email: ${e.toString().replaceFirst('Exception: ', '')}')));
         }
       }
       if (mounted) searchFocus.requestFocus();
@@ -710,9 +840,11 @@ class _SalesPosScreenState extends State<SalesPosScreen> {
   ));
 
   Widget _tileCatalog(List<Map<String, Object?>> products) => GridView.builder(
-    gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-      maxCrossAxisExtent: widget.touchMode ? 250 : 220,
-      childAspectRatio: widget.touchMode ? 1.45 : 1.55,
+    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+      // Product tile footprint intentionally stays identical in Touch mode.
+      // Touch mode still enlarges controls/buttons elsewhere in POS.
+      maxCrossAxisExtent: 220,
+      childAspectRatio: 1.55,
       crossAxisSpacing: 10,
       mainAxisSpacing: 10,
     ),
@@ -731,13 +863,13 @@ class _SalesPosScreenState extends State<SalesPosScreen> {
             padding: EdgeInsets.all(widget.touchMode ? 15 : 12),
             decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), border: Border.all(color: canAdd ? Theme.of(context).dividerColor : Theme.of(context).colorScheme.error.withValues(alpha: .65), width: canAdd ? 1 : 1.5)),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('${p['name']}', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: widget.touchMode ? 15 : 13, fontWeight: FontWeight.w700)),
+              Text('${p['name']}', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: widget.touchMode ? 12.5 : 13, fontWeight: FontWeight.w700)),
               const Spacer(),
-              Text('${p['category'] ?? ''} • ${p['product_type'] ?? 'Stocked'}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: Color(0xFF8190A0))),
+              Text('${p['category'] ?? ''} • ${p['product_type'] ?? 'Stocked'}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: widget.touchMode ? 9 : 10, color: const Color(0xFF8190A0))),
               const SizedBox(height: 4),
               Row(children: [
-                Expanded(child: Text(_d(p['price']).toStringAsFixed(3), style: TextStyle(fontSize: widget.touchMode ? 18 : 16, fontWeight: FontWeight.w800, color: V3Style.blueDark))),
-                Text((p['product_type'] == 'Recipe' || p['product_type'] == 'Combo') ? '${p['product_type']}' : (stock > 0 ? 'Stock ${stock.toStringAsFixed(1)}' : 'OUT'), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: canAdd ? const Color(0xFF5E7183) : Theme.of(context).colorScheme.error)),
+                Expanded(child: Text(_d(p['price']).toStringAsFixed(3), style: TextStyle(fontSize: widget.touchMode ? 15 : 16, fontWeight: FontWeight.w800, color: V3Style.blueDark))),
+                Text((p['product_type'] == 'Recipe' || p['product_type'] == 'Combo') ? '${p['product_type']}' : (stock > 0 ? 'Stock ${stock.toStringAsFixed(1)}' : 'OUT'), style: TextStyle(fontSize: widget.touchMode ? 9 : 10, fontWeight: FontWeight.w700, color: canAdd ? const Color(0xFF5E7183) : Theme.of(context).colorScheme.error)),
               ]),
             ]),
           ),

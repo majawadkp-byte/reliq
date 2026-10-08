@@ -13,7 +13,8 @@ class SmartBuyingScreen extends StatefulWidget {
 
 class _SmartBuyingScreenState extends State<SmartBuyingScreen> {
   Future<void> _createPurchaseOrder(Map<String, Object?> row) async {
-    final suppliers = await AppDatabase.instance.suppliers(activeOnly: true, limit: 10000);
+    final suppliers =
+        await AppDatabase.instance.suppliers(activeOnly: true, limit: 10000);
     if (!mounted) return;
     final preferred = '${row['supplier'] ?? ''}'.trim().toLowerCase();
     Map<String, Object?>? selected;
@@ -29,25 +30,36 @@ class _SmartBuyingScreenState extends State<SmartBuyingScreen> {
       String? selectedId;
       final ok = await showDialog<bool>(
         context: context,
-        builder: (dialogContext) => StatefulBuilder(builder: (dialogContext, update) => AlertDialog(
-          title: Text('Choose supplier for ${row['name']}'),
-          content: SizedBox(width: 560, child: SearchableMapSelect(
-            options: suppliers,
-            value: selectedId,
-            labelText: 'Supplier',
-            hintText: 'Type name, phone or email...',
-            display: (s) => '${s['name']}',
-            subtitle: (s) => [
-              if ('${s['phone'] ?? ''}'.trim().isNotEmpty) '${s['phone']}',
-              if ('${s['email'] ?? ''}'.trim().isNotEmpty) '${s['email']}',
-            ].join(' • '),
-            onChanged: (v) => update(() => selectedId = v),
-          )),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
-            FilledButton(onPressed: selectedId == null ? null : () => Navigator.pop(dialogContext, true), child: const Text('Select')),
-          ],
-        )),
+        builder: (dialogContext) => StatefulBuilder(
+            builder: (dialogContext, update) => AlertDialog(
+                  title: Text('Choose supplier for ${row['name']}'),
+                  content: SizedBox(
+                      width: 560,
+                      child: SearchableMapSelect(
+                        options: suppliers,
+                        value: selectedId,
+                        labelText: 'Supplier',
+                        hintText: 'Type name, phone or email...',
+                        display: (s) => '${s['name']}',
+                        subtitle: (s) => [
+                          if ('${s['phone'] ?? ''}'.trim().isNotEmpty)
+                            '${s['phone']}',
+                          if ('${s['email'] ?? ''}'.trim().isNotEmpty)
+                            '${s['email']}',
+                        ].join(' • '),
+                        onChanged: (v) => update(() => selectedId = v),
+                      )),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(dialogContext, false),
+                        child: const Text('Cancel')),
+                    FilledButton(
+                        onPressed: selectedId == null
+                            ? null
+                            : () => Navigator.pop(dialogContext, true),
+                        child: const Text('Select')),
+                  ],
+                )),
       );
       if (ok == true && selectedId != null) {
         selected = suppliers.firstWhere((s) => '${s['id']}' == selectedId);
@@ -61,24 +73,32 @@ class _SmartBuyingScreenState extends State<SmartBuyingScreen> {
     try {
       final no = await AppDatabase.instance.createPurchaseOrder(
         supplierId: selected['id'].toString(),
-        items: [{
-          'id': row['id'],
-          'name': row['name'],
-          'qty': qty,
-          'unit_cost': _n(row, 'cost'),
-        }],
+        items: [
+          {
+            'id': row['id'],
+            'name': row['name'],
+            'qty': qty,
+            'unit_cost': _n(row, 'cost'),
+          }
+        ],
         placeOrder: true,
         notes: 'Created from Smart Buying • ${row['recommendation'] ?? ''}',
       );
       if (!mounted) return;
       setState(() {
-        _future = AppDatabase.instance.inventoryIntelligence(lookbackDays: lookback, forceRefresh: true);
+        _future = AppDatabase.instance
+            .inventoryIntelligence(lookbackDays: lookback, forceRefresh: true);
       });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Purchase order $no created. Incoming stock is now included in Smart Buying.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              'Purchase order $no created. Incoming stock is now included in Smart Buying.')));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(e.toString().replaceFirst('Exception: ', ''))));
     }
   }
+
   int lookback = 30;
   final budgetCtrl = TextEditingController();
   String priority = 'Balanced';
@@ -87,7 +107,8 @@ class _SmartBuyingScreenState extends State<SmartBuyingScreen> {
   @override
   void initState() {
     super.initState();
-    _future = AppDatabase.instance.inventoryIntelligence(lookbackDays: lookback);
+    _future =
+        AppDatabase.instance.inventoryIntelligence(lookbackDays: lookback);
   }
 
   @override
@@ -146,7 +167,12 @@ class _SmartBuyingScreenState extends State<SmartBuyingScreen> {
     }
 
     result.sort((a, b) {
-      final groupOrder = {'Buy Now': 0, 'Review': 1, 'Monitor': 2, 'Do Not Buy': 3};
+      final groupOrder = {
+        'Buy Now': 0,
+        'Review': 1,
+        'Monitor': 2,
+        'Do Not Buy': 3
+      };
       final ga = groupOrder['${a['buying_group']}'] ?? 9;
       final gb = groupOrder['${b['buying_group']}'] ?? 9;
       if (ga != gb) return ga.compareTo(gb);
@@ -157,11 +183,13 @@ class _SmartBuyingScreenState extends State<SmartBuyingScreen> {
     final hasBudget = raw.isNotEmpty && (double.tryParse(raw) ?? 0) > 0;
     if (!hasBudget) return result;
 
-    var remaining = (double.tryParse(raw) ?? 0).clamp(0, double.infinity).toDouble();
+    var remaining =
+        (double.tryParse(raw) ?? 0).clamp(0, double.infinity).toDouble();
     final candidates = result
         .where((r) => '${r['buying_group']}' == 'Buy Now')
         .toList()
-      ..sort((a, b) => _n(b, 'priority_score').compareTo(_n(a, 'priority_score')));
+      ..sort(
+          (a, b) => _n(b, 'priority_score').compareTo(_n(a, 'priority_score')));
 
     for (final row in candidates) {
       final cost = _n(row, 'cost');
@@ -205,10 +233,15 @@ class _SmartBuyingScreenState extends State<SmartBuyingScreen> {
         }
 
         final prepared = _prepared(snapshot.data!);
-        final buyRows = prepared.where((r) => '${r['buying_group']}' == 'Buy Now').toList();
-        final reviewRows = prepared.where((r) => '${r['buying_group']}' == 'Review').toList();
-        final monitorRows = prepared.where((r) => '${r['buying_group']}' == 'Monitor').toList();
-        final avoidRows = prepared.where((r) => '${r['buying_group']}' == 'Do Not Buy').toList();
+        final buyRows =
+            prepared.where((r) => '${r['buying_group']}' == 'Buy Now').toList();
+        final reviewRows =
+            prepared.where((r) => '${r['buying_group']}' == 'Review').toList();
+        final monitorRows =
+            prepared.where((r) => '${r['buying_group']}' == 'Monitor').toList();
+        final avoidRows = prepared
+            .where((r) => '${r['buying_group']}' == 'Do Not Buy')
+            .toList();
         final rawBudget = budgetCtrl.text.trim();
         final budget = double.tryParse(rawBudget) ?? 0;
         final hasBudget = rawBudget.isNotEmpty && budget > 0;
@@ -246,7 +279,8 @@ class _SmartBuyingScreenState extends State<SmartBuyingScreen> {
                         Text(
                           'RELIQ first decides what needs buying, reviewing, monitoring, or avoiding. A budget is optional and only controls how much of the recommendation you can fund.',
                           style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -270,7 +304,9 @@ class _SmartBuyingScreenState extends State<SmartBuyingScreen> {
                   const SizedBox(width: 6),
                   IconButton(
                     tooltip: 'Recalculate latest analytics',
-                    onPressed: () => setState(() => _future = AppDatabase.instance.inventoryIntelligence(lookbackDays: lookback, forceRefresh: true)),
+                    onPressed: () => setState(() => _future =
+                        AppDatabase.instance.inventoryIntelligence(
+                            lookbackDays: lookback, forceRefresh: true)),
                     icon: const Icon(Icons.refresh),
                   ),
                 ],
@@ -411,7 +447,8 @@ class _SmartBuyingScreenState extends State<SmartBuyingScreen> {
               width: 220,
               child: DropdownButtonFormField<String>(
                 value: priority,
-                decoration: const InputDecoration(labelText: 'Priority strategy'),
+                decoration:
+                    const InputDecoration(labelText: 'Priority strategy'),
                 items: const [
                   'Balanced',
                   'Fast Movers First',
@@ -423,15 +460,22 @@ class _SmartBuyingScreenState extends State<SmartBuyingScreen> {
                     setState(() => priority = value ?? 'Balanced'),
               ),
             ),
-            _mini('Recommended need', recommendedSpend.toStringAsFixed(3), V3Style.blue),
+            _mini('Recommended need', recommendedSpend.toStringAsFixed(3),
+                V3Style.blue),
             _mini(
               hasBudget ? 'Budget' : 'Budget',
-              hasBudget ? (double.tryParse(budgetCtrl.text.trim()) ?? 0).toStringAsFixed(3) : 'Not set',
+              hasBudget
+                  ? (double.tryParse(budgetCtrl.text.trim()) ?? 0)
+                      .toStringAsFixed(3)
+                  : 'Not set',
               V3Style.purple,
             ),
-            _mini('Allocated', hasBudget ? allocated.toStringAsFixed(3) : '—', V3Style.success),
-            _mini('Remaining', hasBudget ? remaining.toStringAsFixed(3) : '—', V3Style.warning),
-            _mini('Buy / Review / Avoid', '$buy / $review / $avoid', V3Style.teal),
+            _mini('Allocated', hasBudget ? allocated.toStringAsFixed(3) : '—',
+                V3Style.success),
+            _mini('Remaining', hasBudget ? remaining.toStringAsFixed(3) : '—',
+                V3Style.warning),
+            _mini('Buy / Review / Avoid', '$buy / $review / $avoid',
+                V3Style.teal),
             _mini('Monitor', '$monitor', V3Style.info),
           ],
         ),
@@ -535,11 +579,16 @@ class _SmartBuyingScreenState extends State<SmartBuyingScreen> {
             children: [
               Text(
                 '${row['name']}',
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                style:
+                    const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
               ),
               _chip('${row['health']}', accent),
               _chip('${row['demand_signal']}', V3Style.info),
-              _chip('${row['demand_state'] ?? 'Demand review'}', _flag(row,'auto_purchase_eligible') ? V3Style.success : V3Style.warning),
+              _chip(
+                  '${row['demand_state'] ?? 'Demand review'}',
+                  _flag(row, 'auto_purchase_eligible')
+                      ? V3Style.success
+                      : V3Style.warning),
               _chip('$confidence confidence', _confidenceColor(confidence)),
               if (hasBudget && decision.isNotEmpty)
                 _chip('Budget: $decision', _decisionColor(decision)),
@@ -548,19 +597,25 @@ class _SmartBuyingScreenState extends State<SmartBuyingScreen> {
           const SizedBox(height: 8),
           Text(
             '${row['explanation'] ?? row['recommendation'] ?? 'Keep monitoring'}',
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 10),
           Wrap(
             spacing: 18,
             runSpacing: 8,
             children: [
-              _metric('On hand', '${_n(row, 'stock').toStringAsFixed(2)} $unit'),
-              _metric('Incoming / on order', '${_n(row, 'incoming_qty').toStringAsFixed(2)} $unit'),
-              _metric('Inventory position', '${_n(row, 'inventory_position').toStringAsFixed(2)} $unit'),
+              _metric(
+                  'On hand', '${_n(row, 'stock').toStringAsFixed(2)} $unit'),
+              _metric('Incoming / on order',
+                  '${_n(row, 'incoming_qty').toStringAsFixed(2)} $unit'),
+              _metric('Inventory position',
+                  '${_n(row, 'inventory_position').toStringAsFixed(2)} $unit'),
               _metric(
                 'Stock will last',
-                coverage < 0 ? 'No reliable sales rate' : '${coverage.toStringAsFixed(0)} days',
+                coverage < 0
+                    ? 'No reliable sales rate'
+                    : '${coverage.toStringAsFixed(0)} days',
               ),
               _metric(
                 'Last sold',
@@ -572,9 +627,13 @@ class _SmartBuyingScreenState extends State<SmartBuyingScreen> {
               ),
               _metric(
                 'Suggested purchase',
-                suggested > 0 ? '${suggested.toStringAsFixed(2)} $unit' : 'None',
+                suggested > 0
+                    ? '${suggested.toStringAsFixed(2)} $unit'
+                    : 'None',
               ),
-              if (_flag(row,'purchase_blocked')) _metric('Purchase decision', 'Blocked: ${row['purchase_block_reason'] ?? 'Review'}'),
+              if (_flag(row, 'purchase_blocked'))
+                _metric('Purchase decision',
+                    'Blocked: ${row['purchase_block_reason'] ?? 'Review'}'),
               if (_n(row, 'projected_expiry_value') > 0)
                 _metric(
                   'Expiry value at risk',
@@ -709,18 +768,23 @@ class _SmartBuyingScreenState extends State<SmartBuyingScreen> {
   }
 }
 
-
 class _SmartBuyingLoading extends StatelessWidget {
   const _SmartBuyingLoading();
   @override
-  Widget build(BuildContext context) => const Center(child: Padding(
-    padding: EdgeInsets.all(24),
-    child: Column(mainAxisSize: MainAxisSize.min, children: [
-      SizedBox.square(dimension: 30, child: CircularProgressIndicator(strokeWidth: 3)),
-      SizedBox(height: 14),
-      Text('Preparing Smart Buying', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
-      SizedBox(height: 6),
-      Text('RELIQ is building the latest replenishment snapshot. Saved analytics will make subsequent visits much faster.', textAlign: TextAlign.center, style: TextStyle(color: V3Style.muted)),
-    ]),
-  ));
+  Widget build(BuildContext context) => const Center(
+          child: Padding(
+        padding: EdgeInsets.all(24),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          SizedBox.square(
+              dimension: 30, child: CircularProgressIndicator(strokeWidth: 3)),
+          SizedBox(height: 14),
+          Text('Preparing Smart Buying',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
+          SizedBox(height: 6),
+          Text(
+              'RELIQ is building the latest replenishment snapshot. Saved analytics will make subsequent visits much faster.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: V3Style.muted)),
+        ]),
+      ));
 }

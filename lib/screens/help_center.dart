@@ -45,14 +45,16 @@ class _HelpCenterDialog extends StatelessWidget {
       'Maintain selling price, cost, tax, category and stock-planning fields.',
       'Use RELIQ Lookup (Ctrl/Cmd + F) to search products, customers and suppliers from anywhere.',
     ]),
-    _HelpTopic('Customer receipts & supplier payments', Icons.payments_outlined, [
+    _HelpTopic(
+        'Customer receipts & supplier payments', Icons.payments_outlined, [
       'Open Payments & Ledgers.',
       'Choose Customers for money received or Suppliers for money paid.',
       'Select the party and enter the receipt/payment amount and method.',
       'Allocate the amount against open invoices/bills; partial allocation is allowed.',
       'Review the party ledger afterward to confirm outstanding balances.',
     ]),
-    _HelpTopic('Accounting integrity & reconciliation', Icons.account_balance_outlined, [
+    _HelpTopic('Accounting integrity & reconciliation',
+        Icons.account_balance_outlined, [
       'Open Payments & Ledgers → Unapplied Credits to find customer receipts or supplier advances that still have an unused amount.',
       'Choose Allocate to apply the original payment to one or more open invoices, supplier bills or opening-balance documents without creating a second payment.',
       'Open Adjustments & Opening to post opening receivables/payables, opening credits/advances, customer credit/debit notes and supplier debit/credit notes.',
@@ -91,7 +93,8 @@ class _HelpCenterDialog extends StatelessWidget {
       'Preview the file before importing and correct duplicate SKU/barcode or invalid number warnings.',
       'Selling price is imported from selling_price; common alternatives such as sell_price, retail_price and sale_price are also recognised.',
     ]),
-    _HelpTopic('Users, permissions & audit trail', Icons.admin_panel_settings_outlined, [
+    _HelpTopic('Users, permissions & audit trail',
+        Icons.admin_panel_settings_outlined, [
       'Open Users & Roles to create accounts and assign Admin, Accountant, Cashier, Storekeeper or Viewer access.',
       'The Owner can fine-tune sensitive permissions including price overrides, posted-transaction editing, voiding, product deletion, profit visibility, migration and backup/restore.',
       'Open Audit Trail to review who performed an action, when it happened, the branch/terminal used, the affected entity/reference and the recorded details.',
@@ -106,7 +109,8 @@ class _HelpCenterDialog extends StatelessWidget {
       'RELIQ validates the package first and creates a safety database backup before a full migration.',
       'Use the reconciliation summary afterward to compare products, stock, sales, purchases, receivables and payables with the old system.',
     ]),
-    _HelpTopic('Demand forecasting & automatic stock levels', Icons.auto_graph_outlined, [
+    _HelpTopic('Demand forecasting & automatic stock levels',
+        Icons.auto_graph_outlined, [
       'Open Inventory Intelligence to expand any product and review its 7, 30, 60 and 90-day demand forecasts.',
       'RELIQ combines recent 7/30/90-day demand, short-term trend, weekday patterns, intermittent-demand behavior, demand variability and product-lifecycle history transfer.',
       'When roughly a year of history is available, the model also blends the equivalent period from last year so seasonal peaks and dips influence the forecast.',
@@ -115,7 +119,8 @@ class _HelpCenterDialog extends StatelessWidget {
       'Automatic stock-level updates only apply when forecast confidence is Medium or High. RELIQ never changes MOQ, order multiple or case pack.',
       'Smart Buying uses the resulting forecast target, incoming purchase orders and existing MOQ rules to calculate the suggested purchase quantity.',
     ]),
-    _HelpTopic('Product lifecycle, services & replacements', Icons.change_circle_outlined, [
+    _HelpTopic('Product lifecycle, services & replacements',
+        Icons.change_circle_outlined, [
       'Products can be Stocked, Non-stocked, Service, Recipe or Combo. Only Stocked products maintain on-hand quantity and participate in stock valuation/reorder forecasting.',
       'Use Sellable and Purchasable independently. A service can be sellable without being purchasable; a purchase-only material can be hidden from Sales POS.',
       'If a supplier stops a product, set Lifecycle Status to Discontinued or Replaced instead of deleting transaction history.',
@@ -139,7 +144,8 @@ class _HelpCenterDialog extends StatelessWidget {
       'Keep copies on a separate drive or backup location.',
       'Use Restore backup only when you intend to replace the current live database.',
     ]),
-    _HelpTopic('Application updates - online or offline', Icons.system_update_alt_outlined, [
+    _HelpTopic('Application updates - online or offline',
+        Icons.system_update_alt_outlined, [
       'Open Settings → System & Updates, or choose Help → Check for Updates.',
       'For an offline business, copy the .reliq update package to the computer using USB, a local network folder or any other transfer method and choose Install update package.',
       'RELIQ validates the package and creates a pre-update database backup before it can restart and install.',
@@ -160,16 +166,25 @@ class _HelpCenterDialog extends StatelessWidget {
             child: Row(children: [
               const Icon(Icons.help_outline, color: V3Style.blue),
               const SizedBox(width: 10),
-              const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('RELIQ Help Center', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
-                Text('Quick operating guides for everyday sales, purchasing, stock and accounting workflows.', style: TextStyle(color: V3Style.muted)),
-              ])),
+              const Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    Text('RELIQ Help Center',
+                        style: TextStyle(
+                            fontSize: 21, fontWeight: FontWeight.w800)),
+                    Text(
+                        'Quick operating guides for everyday sales, purchasing, stock and accounting workflows.',
+                        style: TextStyle(color: V3Style.muted)),
+                  ])),
               TextButton.icon(
                 onPressed: () => ReliqHelp.showKeyboardShortcuts(context),
                 icon: const Icon(Icons.keyboard_alt_outlined),
                 label: const Text('Keyboard Shortcuts'),
               ),
-              IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+              IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close)),
             ]),
           ),
           const Divider(height: 1),
@@ -200,131 +215,177 @@ class _TopicCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-    margin: EdgeInsets.zero,
-    child: ExpansionTile(
-      leading: Icon(topic.icon, color: V3Style.blue),
-      title: Text(topic.title, style: const TextStyle(fontWeight: FontWeight.w800)),
-      childrenPadding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
-      children: [
-        for (var i = 0; i < topic.steps.length; i++)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Container(
-                width: 22, height: 22,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(color: V3Style.blue.withValues(alpha: .10), borderRadius: BorderRadius.circular(99)),
-                child: Text('${i + 1}', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: V3Style.blue)),
+        margin: EdgeInsets.zero,
+        child: ExpansionTile(
+          leading: Icon(topic.icon, color: V3Style.blue),
+          title: Text(topic.title,
+              style: const TextStyle(fontWeight: FontWeight.w800)),
+          childrenPadding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
+          children: [
+            for (var i = 0; i < topic.steps.length; i++)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 22,
+                        height: 22,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                            color: V3Style.blue.withValues(alpha: .10),
+                            borderRadius: BorderRadius.circular(99)),
+                        child: Text('${i + 1}',
+                            style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: V3Style.blue)),
+                      ),
+                      const SizedBox(width: 9),
+                      Expanded(child: Text(topic.steps[i])),
+                    ]),
               ),
-              const SizedBox(width: 9),
-              Expanded(child: Text(topic.steps[i])),
-            ]),
-          ),
-      ],
-    ),
-  );
+          ],
+        ),
+      );
 }
 
 class _KeyboardShortcutsDialog extends StatelessWidget {
   const _KeyboardShortcutsDialog();
 
   static const groups = <(String, List<(String, String)>)>[
-    ('Global', [
-      ('Ctrl/Cmd + K', 'Command Palette'),
-      ('Ctrl/Cmd + F', 'Universal RELIQ Lookup: products, customers and suppliers'),
-      ('Ctrl/Cmd + N', 'New sale, purchase, product, customer or supplier (contextual)'),
-      ('Ctrl/Cmd + S', 'Complete/save Sales and Purchases'),
-      ('Ctrl/Cmd + R', 'Refresh current screen'),
-      ('Ctrl/Cmd + ,', 'Settings'),
-      ('Esc', 'Close / cancel / go back'),
-      ('Shift + ?', 'Keyboard Shortcuts'),
-    ]),
-    ('Navigation', [
-      ('Alt + 1', 'Morning Brief'),
-      ('Alt + 2', 'Sales / POS'),
-      ('Alt + 3', 'Receive Purchase'),
-      ('Alt + 4', 'Products & Barcodes'),
-      ('Alt + 5', 'Customer Ledgers'),
-      ('Alt + 6', 'Supplier Ledgers'),
-      ('Alt + 7', 'Payment Activity'),
-      ('Alt + 8', 'Reports'),
-      ('Alt + 9', 'Business Action Center'),
-    ]),
-    ('POS / Sales — active', [
-      ('F2', 'Product / barcode search'),
-      ('F4', 'Focus customer selection'),
-      ('F5', 'Refresh POS view'),
-      ('F6', 'Focus bill discount'),
-      ('F7', 'Focus delivery / charges'),
-      ('F8', 'Hold / park current sale'),
-      ('F9', 'Focus payment amount'),
-      ('F10', 'Complete sale'),
-      ('Ctrl/Cmd + N', 'Start a new sale (confirms before clearing)'),
-      ('Ctrl/Cmd + S', 'Complete sale'),
-    ]),
-    ('Purchases — active', [
-      ('F2', 'Focus supplier selection'),
-      ('F3', 'Product lookup'),
-      ('F7', 'Focus freight / delivery'),
-      ('F9', 'Focus payment amount'),
-      ('F10', 'Receive / save purchase'),
-      ('Ctrl/Cmd + N', 'Start a new purchase (confirms before clearing)'),
-      ('Ctrl/Cmd + S', 'Receive / save purchase'),
-    ]),
-    ('Products / Stock — active', [
-      ('F2', 'Product lookup / search'),
-      ('F4', 'Open stock adjustment (Stock Adjustment screen)'),
-      ('F5', 'Refresh products / stock adjustment history'),
-      ('Ctrl/Cmd + N', 'New product (Products screen)'),
-      ('Ctrl/Cmd + F', 'Open universal RELIQ Lookup'),
-    ]),
-    ('Customers / Suppliers — active', [
-      ('Ctrl/Cmd + F', 'Open universal RELIQ Lookup'),
-      ('Ctrl/Cmd + N', 'Add a customer or supplier'),
-    ]),
+    (
+      'Global',
+      [
+        ('Ctrl/Cmd + K', 'Command Palette'),
+        (
+          'Ctrl/Cmd + F',
+          'Universal RELIQ Lookup: products, customers and suppliers'
+        ),
+        (
+          'Ctrl/Cmd + N',
+          'New sale, purchase, product, customer or supplier (contextual)'
+        ),
+        ('Ctrl/Cmd + S', 'Complete/save Sales and Purchases'),
+        ('Ctrl/Cmd + R', 'Refresh current screen'),
+        ('Ctrl/Cmd + ,', 'Settings'),
+        ('Esc', 'Close / cancel / go back'),
+        ('Shift + ?', 'Keyboard Shortcuts'),
+      ]
+    ),
+    (
+      'Navigation',
+      [
+        ('Alt + 1', 'Morning Brief'),
+        ('Alt + 2', 'Sales / POS'),
+        ('Alt + 3', 'Receive Purchase'),
+        ('Alt + 4', 'Products & Barcodes'),
+        ('Alt + 5', 'Customer Ledgers'),
+        ('Alt + 6', 'Supplier Ledgers'),
+        ('Alt + 7', 'Payment Activity'),
+        ('Alt + 8', 'Reports'),
+        ('Alt + 9', 'Business Action Center'),
+      ]
+    ),
+    (
+      'POS / Sales — active',
+      [
+        ('F2', 'Product / barcode search'),
+        ('F4', 'Focus customer selection'),
+        ('F5', 'Refresh POS view'),
+        ('F6', 'Focus bill discount'),
+        ('F7', 'Focus delivery / charges'),
+        ('F8', 'Hold / park current sale'),
+        ('F9', 'Focus payment amount'),
+        ('F10', 'Complete sale'),
+        ('Ctrl/Cmd + N', 'Start a new sale (confirms before clearing)'),
+        ('Ctrl/Cmd + S', 'Complete sale'),
+      ]
+    ),
+    (
+      'Purchases — active',
+      [
+        ('F2', 'Focus supplier selection'),
+        ('F3', 'Product lookup'),
+        ('F7', 'Focus freight / delivery'),
+        ('F9', 'Focus payment amount'),
+        ('F10', 'Receive / save purchase'),
+        ('Ctrl/Cmd + N', 'Start a new purchase (confirms before clearing)'),
+        ('Ctrl/Cmd + S', 'Receive / save purchase'),
+      ]
+    ),
+    (
+      'Products / Stock — active',
+      [
+        ('F2', 'Product lookup / search'),
+        ('F4', 'Open stock adjustment (Stock Adjustment screen)'),
+        ('F5', 'Refresh products / stock adjustment history'),
+        ('Ctrl/Cmd + N', 'New product (Products screen)'),
+        ('Ctrl/Cmd + F', 'Open universal RELIQ Lookup'),
+      ]
+    ),
+    (
+      'Customers / Suppliers — active',
+      [
+        ('Ctrl/Cmd + F', 'Open universal RELIQ Lookup'),
+        ('Ctrl/Cmd + N', 'Add a customer or supplier'),
+      ]
+    ),
   ];
 
   @override
   Widget build(BuildContext context) => Dialog(
-    child: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 900, maxHeight: 760),
-      child: Column(children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(22, 18, 12, 12),
-          child: Row(children: [
-            const Icon(Icons.keyboard_alt_outlined, color: V3Style.blue),
-            const SizedBox(width: 10),
-            const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Keyboard Shortcuts', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
-              Text('Ctrl on Windows · Cmd on macOS. Shortcut helper labels can be hidden from Settings without disabling the shortcuts.', style: TextStyle(color: V3Style.muted)),
-            ])),
-            IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
-          ]),
-        ),
-        const Divider(height: 1),
-        Expanded(child: ListView(padding: const EdgeInsets.all(18), children: [
-          for (final group in groups) ...[
-            Text(group.$1, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 7),
-            Card(
-              margin: EdgeInsets.zero,
-              child: Column(children: [
-                for (var i = 0; i < group.$2.length; i++) ...[
-                  ListTile(
-                    dense: true,
-                    title: Text(group.$2[i].$2),
-                    trailing: _KeyBadge(group.$2[i].$1),
-                  ),
-                  if (i != group.$2.length - 1) const Divider(height: 1),
-                ],
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 900, maxHeight: 760),
+          child: Column(children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 18, 12, 12),
+              child: Row(children: [
+                const Icon(Icons.keyboard_alt_outlined, color: V3Style.blue),
+                const SizedBox(width: 10),
+                const Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text('Keyboard Shortcuts',
+                          style: TextStyle(
+                              fontSize: 21, fontWeight: FontWeight.w800)),
+                      Text(
+                          'Ctrl on Windows · Cmd on macOS. Shortcut helper labels can be hidden from Settings without disabling the shortcuts.',
+                          style: TextStyle(color: V3Style.muted)),
+                    ])),
+                IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close)),
               ]),
             ),
-            const SizedBox(height: 16),
-          ],
-        ])),
-      ]),
-    ),
-  );
+            const Divider(height: 1),
+            Expanded(
+                child: ListView(padding: const EdgeInsets.all(18), children: [
+              for (final group in groups) ...[
+                Text(group.$1,
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 7),
+                Card(
+                  margin: EdgeInsets.zero,
+                  child: Column(children: [
+                    for (var i = 0; i < group.$2.length; i++) ...[
+                      ListTile(
+                        dense: true,
+                        title: Text(group.$2[i].$2),
+                        trailing: _KeyBadge(group.$2[i].$1),
+                      ),
+                      if (i != group.$2.length - 1) const Divider(height: 1),
+                    ],
+                  ]),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ])),
+          ]),
+        ),
+      );
 }
 
 class _KeyBadge extends StatelessWidget {
@@ -332,12 +393,14 @@ class _KeyBadge extends StatelessWidget {
   const _KeyBadge(this.text);
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-    decoration: BoxDecoration(
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      border: Border.all(color: Theme.of(context).dividerColor),
-      borderRadius: BorderRadius.circular(6),
-    ),
-    child: Text(text, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800)),
-  );
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          border: Border.all(color: Theme.of(context).dividerColor),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(text,
+            style:
+                const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800)),
+      );
 }

@@ -6,17 +6,371 @@ import '../services/whatsapp_service.dart';
 import '../ui/v3_style.dart';
 import '../ui/searchable_map_select.dart';
 
-class QuotationsScreen extends StatefulWidget { final ValueChanged<int>? onNavigate; const QuotationsScreen({super.key,this.onNavigate}); @override State<QuotationsScreen> createState()=>_QuotationsScreenState(); }
-class _QuotationsScreenState extends State<QuotationsScreen>{ int refresh=0; final search=TextEditingController();
- Future<void> create() async { final ok=await showDialog<bool>(context:context,builder:(_)=>const _QuoteDialog()); if(ok==true&&mounted)setState(()=>refresh++); }
- Future<void> whatsapp(Map<String,Object?> q) async { try{final d=await AppDatabase.instance.quotationDetail(q['id'].toString());final h=Map<String,Object?>.from(d['header'] as Map);final items=(d['items'] as List).cast<Map<String,Object?>>();final s=await AppDatabase.instance.settings();await PrintService.printQuotation(quotation:h,items:items);await WhatsAppService.openChat(phone:(h['customer_whatsapp']??h['customer_phone']??'').toString(),message:WhatsAppService.quotationMessage(s,h),defaultCountryCode:s['whatsapp_country_code']??'');await AppDatabase.instance.setQuotationStatus(h['id'].toString(),'Sent');await AppDatabase.instance.logCommunication(partyType:'Customer',partyId:h['customer_id'].toString(),channel:'WhatsApp',documentType:'Quotation',documentId:h['id'].toString(),action:'Prepared / opened');if(mounted)setState(()=>refresh++);}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('WhatsApp: ${e.toString().replaceFirst('Exception: ','')}')));} }
- Future<void> convert(Map<String,Object?> q) async {try{await AppDatabase.instance.convertQuotationToHeldSale(q['id'].toString());if(mounted){setState(()=>refresh++);ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Quotation converted to a held sale. Open Sales / POS and choose Resume Held to complete payment.')));widget.onNavigate?.call(1);}}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString().replaceFirst('Exception: ',''))));}}
- Future<void> followup(Map<String,Object?> q) async {try{final d=await AppDatabase.instance.quotationDetail(q['id'].toString());final h=Map<String,Object?>.from(d['header'] as Map);final s=await AppDatabase.instance.settings();await WhatsAppService.openChat(phone:(h['customer_whatsapp']??h['customer_phone']??'').toString(),message:WhatsAppService.quotationFollowupMessage(s,h),defaultCountryCode:s['whatsapp_country_code']??'');await AppDatabase.instance.logCommunication(partyType:'Customer',partyId:h['customer_id'].toString(),channel:'WhatsApp',documentType:'Quotation Follow-up',documentId:h['id'].toString(),action:'Prepared / opened');if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Quotation follow-up opened in WhatsApp.')));}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Follow-up: ${e.toString().replaceFirst('Exception: ','')}')));}}
- @override Widget build(BuildContext context)=>Padding(padding:V3Style.pagePadding,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Quotations',style:TextStyle(fontSize:24,fontWeight:FontWeight.w800)),Text('Create, WhatsApp, follow up and convert quotations into sales.',style:TextStyle(color:V3Style.muted))])),FilledButton.icon(onPressed:create,icon:const Icon(Icons.add),label:const Text('New Quotation'))]),const SizedBox(height:12),TextField(controller:search,onChanged:(_)=>setState((){}),decoration:const InputDecoration(prefixIcon:Icon(Icons.search),labelText:'Search quotation, customer or phone')),const SizedBox(height:12),Expanded(child:FutureBuilder(future:AppDatabase.instance.quotations(search:search.text),builder:(c,s){if(!s.hasData)return const Center(child:CircularProgressIndicator());final rows=s.data!;if(rows.isEmpty)return const Center(child:Text('No quotations found.'));return ListView.separated(itemCount:rows.length,separatorBuilder:(_,__)=>const SizedBox(height:8),itemBuilder:(_,i){final q=rows[i];return Card(child:ListTile(title:Text('${q['no']} • ${q['customer_name']??'Customer'}',style:const TextStyle(fontWeight:FontWeight.w700)),subtitle:Text('${DateFormat('dd MMM yyyy').format(DateTime.tryParse('${q['created_at']}')??DateTime.now())} • ${q['status']} • Total ${(q['total'] as num? ?? 0).toStringAsFixed(3)}'),trailing:Wrap(spacing:4,children:[IconButton(tooltip:'Preview PDF',onPressed:()async{final d=await AppDatabase.instance.quotationDetail(q['id'].toString());await PrintService.printQuotation(quotation:Map<String,Object?>.from(d['header'] as Map),items:(d['items'] as List).cast<Map<String,Object?>>());},icon:const Icon(Icons.picture_as_pdf_outlined)),IconButton(tooltip:'WhatsApp quotation',onPressed:()=>whatsapp(q),icon:const Icon(Icons.chat_outlined)),if(q['status']=='Sent')IconButton(tooltip:'WhatsApp follow-up',onPressed:()=>followup(q),icon:const Icon(Icons.mark_chat_unread_outlined)),if(q['status']!='Converted')FilledButton.tonal(onPressed:()=>convert(q),child:const Text('Convert to Sale'))])));});})),])); }
+class QuotationsScreen extends StatefulWidget {
+  final ValueChanged<int>? onNavigate;
+  const QuotationsScreen({super.key, this.onNavigate});
+  @override
+  State<QuotationsScreen> createState() => _QuotationsScreenState();
+}
 
-class _QuoteDialog extends StatefulWidget{const _QuoteDialog();@override State<_QuoteDialog> createState()=>_QuoteDialogState();}
-class _QuoteDialogState extends State<_QuoteDialog>{String customer='';DateTime valid=DateTime.now().add(const Duration(days:14));final notes=TextEditingController(),discount=TextEditingController(text:'0'),delivery=TextEditingController(text:'0'),other=TextEditingController(text:'0');final items=<Map<String,Object?>>[];late Future<List<Map<String,Object?>>> customers,products;
- @override void initState(){super.initState();customers=AppDatabase.instance.customers(activeOnly:true,limit:10000);products=AppDatabase.instance.products(activeOnly:true,limit:10000);}
- double d(String x)=>double.tryParse(x)??0; double get total=>items.fold<double>(0,(a,x)=>a+((x['qty'] as num)* (x['price'] as num)))-d(discount.text)+d(delivery.text)+d(other.text);
- Future<void> addProduct(List<Map<String,Object?>> ps) async {String? pid;final qty=TextEditingController(text:'1');final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('Add quotation item'),content:SizedBox(width:520,child:Column(mainAxisSize:MainAxisSize.min,children:[SearchableMapSelect(options:ps,value:pid,labelText:'Product',display:(x)=>'${x['name']}',subtitle:(x)=>'${x['sku']??''} • ${(x['price'] as num? ?? 0).toStringAsFixed(3)}',onChanged:(v)=>pid=v),const SizedBox(height:10),TextField(controller:qty,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'Quantity'))])),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('Cancel')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Add'))]));if(ok==true&&pid!=null){final p=ps.firstWhere((x)=>x['id'].toString()==pid);setState(()=>items.add({'id':p['id'],'name':p['name'],'sku':p['sku'],'qty':d(qty.text),'price':(p['price'] as num? ?? 0).toDouble(),'line_discount':0.0}));}}
- @override Widget build(BuildContext context)=>AlertDialog(title:const Text('New Quotation'),content:SizedBox(width:760,height:600,child:FutureBuilder(future:Future.wait([customers,products]),builder:(c,s){if(!s.hasData)return const Center(child:CircularProgressIndicator());final cs=s.data![0],ps=s.data![1];return Column(children:[SearchableMapSelect(options:cs,value:customer,labelText:'Customer',display:(x)=>'${x['name']}',subtitle:(x)=>'${x['phone']??''} • ${x['whatsapp']??''}',onChanged:(v)=>setState(()=>customer=v??'')),const SizedBox(height:10),Row(children:[Expanded(child:Text('Valid until ${DateFormat('dd MMM yyyy').format(valid)}')),TextButton.icon(onPressed:()async{final x=await showDatePicker(context:context,firstDate:DateTime.now(),lastDate:DateTime.now().add(const Duration(days:730)),initialDate:valid);if(x!=null)setState(()=>valid=x);},icon:const Icon(Icons.calendar_month),label:const Text('Change')),FilledButton.tonalIcon(onPressed:()=>addProduct(ps),icon:const Icon(Icons.add),label:const Text('Add product'))]),const SizedBox(height:8),Expanded(child:ListView.builder(itemCount:items.length,itemBuilder:(_,i){final x=items[i];return ListTile(title:Text('${x['name']}'),subtitle:Text('${x['qty']} × ${(x['price'] as num).toStringAsFixed(3)}'),trailing:IconButton(onPressed:()=>setState(()=>items.removeAt(i)),icon:const Icon(Icons.delete_outline)));})),Row(children:[Expanded(child:TextField(controller:discount,onChanged:(_)=>setState((){}),decoration:const InputDecoration(labelText:'Discount'))),const SizedBox(width:8),Expanded(child:TextField(controller:delivery,onChanged:(_)=>setState((){}),decoration:const InputDecoration(labelText:'Delivery'))),const SizedBox(width:8),Expanded(child:TextField(controller:other,onChanged:(_)=>setState((){}),decoration:const InputDecoration(labelText:'Other charge')))]),const SizedBox(height:8),TextField(controller:notes,decoration:const InputDecoration(labelText:'Notes / terms')),const SizedBox(height:8),Align(alignment:Alignment.centerRight,child:Text('Quotation total: ${total.toStringAsFixed(3)}',style:const TextStyle(fontSize:18,fontWeight:FontWeight.w800))) ]);})),actions:[TextButton(onPressed:()=>Navigator.pop(context,false),child:const Text('Cancel')),FilledButton(onPressed:customer.isEmpty||items.isEmpty?null:()async{await AppDatabase.instance.saveQuotation(customerId:customer,items:items,validUntil:valid,discount:d(discount.text),deliveryCharge:d(delivery.text),otherCharge:d(other.text),notes:notes.text);if(context.mounted)Navigator.pop(context,true);},child:const Text('Save Quotation'))]);}
+class _QuotationsScreenState extends State<QuotationsScreen> {
+  int refresh = 0;
+  final search = TextEditingController();
+  Future<void> create() async {
+    final ok = await showDialog<bool>(
+        context: context, builder: (_) => const _QuoteDialog());
+    if (ok == true && mounted) setState(() => refresh++);
+  }
+
+  Future<void> whatsapp(Map<String, Object?> q) async {
+    try {
+      final d = await AppDatabase.instance.quotationDetail(q['id'].toString());
+      final h = Map<String, Object?>.from(d['header'] as Map);
+      final items = (d['items'] as List).cast<Map<String, Object?>>();
+      final s = await AppDatabase.instance.settings();
+      await PrintService.printQuotation(quotation: h, items: items);
+      await WhatsAppService.openChat(
+          phone:
+              (h['customer_whatsapp'] ?? h['customer_phone'] ?? '').toString(),
+          message: WhatsAppService.quotationMessage(s, h),
+          defaultCountryCode: s['whatsapp_country_code'] ?? '');
+      await AppDatabase.instance.setQuotationStatus(h['id'].toString(), 'Sent');
+      await AppDatabase.instance.logCommunication(
+          partyType: 'Customer',
+          partyId: h['customer_id'].toString(),
+          channel: 'WhatsApp',
+          documentType: 'Quotation',
+          documentId: h['id'].toString(),
+          action: 'Prepared / opened');
+      if (mounted) setState(() => refresh++);
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                'WhatsApp: ${e.toString().replaceFirst('Exception: ', '')}')));
+    }
+  }
+
+  Future<void> convert(Map<String, Object?> q) async {
+    try {
+      await AppDatabase.instance.convertQuotationToHeldSale(q['id'].toString());
+      if (mounted) {
+        setState(() => refresh++);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'Quotation converted to a held sale. Open Sales / POS and choose Resume Held to complete payment.')));
+        widget.onNavigate?.call(1);
+      }
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(e.toString().replaceFirst('Exception: ', ''))));
+    }
+  }
+
+  Future<void> followup(Map<String, Object?> q) async {
+    try {
+      final d = await AppDatabase.instance.quotationDetail(q['id'].toString());
+      final h = Map<String, Object?>.from(d['header'] as Map);
+      final s = await AppDatabase.instance.settings();
+      await WhatsAppService.openChat(
+          phone:
+              (h['customer_whatsapp'] ?? h['customer_phone'] ?? '').toString(),
+          message: WhatsAppService.quotationFollowupMessage(s, h),
+          defaultCountryCode: s['whatsapp_country_code'] ?? '');
+      await AppDatabase.instance.logCommunication(
+          partyType: 'Customer',
+          partyId: h['customer_id'].toString(),
+          channel: 'WhatsApp',
+          documentType: 'Quotation Follow-up',
+          documentId: h['id'].toString(),
+          action: 'Prepared / opened');
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Quotation follow-up opened in WhatsApp.')));
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                'Follow-up: ${e.toString().replaceFirst('Exception: ', '')}')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Padding(
+      padding: V3Style.pagePadding,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Expanded(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                Text('Quotations',
+                    style:
+                        TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
+                Text(
+                    'Create, WhatsApp, follow up and convert quotations into sales.',
+                    style: TextStyle(color: V3Style.muted))
+              ])),
+          FilledButton.icon(
+              onPressed: create,
+              icon: const Icon(Icons.add),
+              label: const Text('New Quotation'))
+        ]),
+        const SizedBox(height: 12),
+        TextField(
+            controller: search,
+            onChanged: (_) => setState(() {}),
+            decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.search),
+                labelText: 'Search quotation, customer or phone')),
+        const SizedBox(height: 12),
+        Expanded(
+            child: FutureBuilder(
+                future: AppDatabase.instance.quotations(search: search.text),
+                builder: (c, s) {
+                  if (!s.hasData)
+                    return const Center(child: CircularProgressIndicator());
+                  final rows = s.data!;
+                  if (rows.isEmpty)
+                    return const Center(child: Text('No quotations found.'));
+                  return ListView.separated(
+                      itemCount: rows.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (_, i) {
+                        final q = rows[i];
+                        return Card(
+                            child: ListTile(
+                                title: Text(
+                                    '${q['no']} • ${q['customer_name'] ?? 'Customer'}',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w700)),
+                                subtitle: Text(
+                                    '${DateFormat('dd MMM yyyy').format(DateTime.tryParse('${q['created_at']}') ?? DateTime.now())} • ${q['status']} • Total ${(q['total'] as num? ?? 0).toStringAsFixed(3)}'),
+                                trailing: Wrap(spacing: 4, children: [
+                                  IconButton(
+                                      tooltip: 'Preview PDF',
+                                      onPressed: () async {
+                                        final d = await AppDatabase.instance
+                                            .quotationDetail(
+                                                q['id'].toString());
+                                        await PrintService.printQuotation(
+                                            quotation:
+                                                Map<String, Object?>.from(
+                                                    d['header'] as Map),
+                                            items: (d['items'] as List)
+                                                .cast<Map<String, Object?>>());
+                                      },
+                                      icon: const Icon(
+                                          Icons.picture_as_pdf_outlined)),
+                                  IconButton(
+                                      tooltip: 'WhatsApp quotation',
+                                      onPressed: () => whatsapp(q),
+                                      icon: const Icon(Icons.chat_outlined)),
+                                  if (q['status'] == 'Sent')
+                                    IconButton(
+                                        tooltip: 'WhatsApp follow-up',
+                                        onPressed: () => followup(q),
+                                        icon: const Icon(
+                                            Icons.mark_chat_unread_outlined)),
+                                  if (q['status'] != 'Converted')
+                                    FilledButton.tonal(
+                                        onPressed: () => convert(q),
+                                        child: const Text('Convert to Sale'))
+                                ])));
+                      });
+                })),
+      ]));
+}
+
+class _QuoteDialog extends StatefulWidget {
+  const _QuoteDialog();
+  @override
+  State<_QuoteDialog> createState() => _QuoteDialogState();
+}
+
+class _QuoteDialogState extends State<_QuoteDialog> {
+  String customer = '';
+  DateTime valid = DateTime.now().add(const Duration(days: 14));
+  final notes = TextEditingController(),
+      discount = TextEditingController(text: '0'),
+      delivery = TextEditingController(text: '0'),
+      other = TextEditingController(text: '0');
+  final items = <Map<String, Object?>>[];
+  late Future<List<Map<String, Object?>>> customers, products;
+  @override
+  void initState() {
+    super.initState();
+    customers = AppDatabase.instance.customers(activeOnly: true, limit: 10000);
+    products = AppDatabase.instance.products(activeOnly: true, limit: 10000);
+  }
+
+  double d(String x) => double.tryParse(x) ?? 0;
+  double get total =>
+      items.fold<double>(
+          0, (a, x) => a + ((x['qty'] as num) * (x['price'] as num))) -
+      d(discount.text) +
+      d(delivery.text) +
+      d(other.text);
+  Future<void> addProduct(List<Map<String, Object?>> ps) async {
+    String? pid;
+    final qty = TextEditingController(text: '1');
+    final ok = await showDialog<bool>(
+        context: context,
+        builder: (c) => AlertDialog(
+                title: const Text('Add quotation item'),
+                content: SizedBox(
+                    width: 520,
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      SearchableMapSelect(
+                          options: ps,
+                          value: pid,
+                          labelText: 'Product',
+                          display: (x) => '${x['name']}',
+                          subtitle: (x) =>
+                              '${x['sku'] ?? ''} • ${(x['price'] as num? ?? 0).toStringAsFixed(3)}',
+                          onChanged: (v) => pid = v),
+                      const SizedBox(height: 10),
+                      TextField(
+                          controller: qty,
+                          keyboardType: TextInputType.number,
+                          decoration:
+                              const InputDecoration(labelText: 'Quantity'))
+                    ])),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(c, false),
+                      child: const Text('Cancel')),
+                  FilledButton(
+                      onPressed: () => Navigator.pop(c, true),
+                      child: const Text('Add'))
+                ]));
+    if (ok == true && pid != null) {
+      final p = ps.firstWhere((x) => x['id'].toString() == pid);
+      setState(() => items.add({
+            'id': p['id'],
+            'name': p['name'],
+            'sku': p['sku'],
+            'qty': d(qty.text),
+            'price': (p['price'] as num? ?? 0).toDouble(),
+            'line_discount': 0.0
+          }));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+          title: const Text('New Quotation'),
+          content: SizedBox(
+              width: 760,
+              height: 600,
+              child: FutureBuilder(
+                  future: Future.wait([customers, products]),
+                  builder: (c, s) {
+                    if (!s.hasData)
+                      return const Center(child: CircularProgressIndicator());
+                    final cs = s.data![0], ps = s.data![1];
+                    return Column(children: [
+                      SearchableMapSelect(
+                          options: cs,
+                          value: customer,
+                          labelText: 'Customer',
+                          display: (x) => '${x['name']}',
+                          subtitle: (x) =>
+                              '${x['phone'] ?? ''} • ${x['whatsapp'] ?? ''}',
+                          onChanged: (v) => setState(() => customer = v ?? '')),
+                      const SizedBox(height: 10),
+                      Row(children: [
+                        Expanded(
+                            child: Text(
+                                'Valid until ${DateFormat('dd MMM yyyy').format(valid)}')),
+                        TextButton.icon(
+                            onPressed: () async {
+                              final x = await showDatePicker(
+                                  context: context,
+                                  firstDate: DateTime.now(),
+                                  lastDate: DateTime.now()
+                                      .add(const Duration(days: 730)),
+                                  initialDate: valid);
+                              if (x != null) setState(() => valid = x);
+                            },
+                            icon: const Icon(Icons.calendar_month),
+                            label: const Text('Change')),
+                        FilledButton.tonalIcon(
+                            onPressed: () => addProduct(ps),
+                            icon: const Icon(Icons.add),
+                            label: const Text('Add product'))
+                      ]),
+                      const SizedBox(height: 8),
+                      Expanded(
+                          child: ListView.builder(
+                              itemCount: items.length,
+                              itemBuilder: (_, i) {
+                                final x = items[i];
+                                return ListTile(
+                                    title: Text('${x['name']}'),
+                                    subtitle: Text(
+                                        '${x['qty']} × ${(x['price'] as num).toStringAsFixed(3)}'),
+                                    trailing: IconButton(
+                                        onPressed: () =>
+                                            setState(() => items.removeAt(i)),
+                                        icon:
+                                            const Icon(Icons.delete_outline)));
+                              })),
+                      Row(children: [
+                        Expanded(
+                            child: TextField(
+                                controller: discount,
+                                onChanged: (_) => setState(() {}),
+                                decoration: const InputDecoration(
+                                    labelText: 'Discount'))),
+                        const SizedBox(width: 8),
+                        Expanded(
+                            child: TextField(
+                                controller: delivery,
+                                onChanged: (_) => setState(() {}),
+                                decoration: const InputDecoration(
+                                    labelText: 'Delivery'))),
+                        const SizedBox(width: 8),
+                        Expanded(
+                            child: TextField(
+                                controller: other,
+                                onChanged: (_) => setState(() {}),
+                                decoration: const InputDecoration(
+                                    labelText: 'Other charge')))
+                      ]),
+                      const SizedBox(height: 8),
+                      TextField(
+                          controller: notes,
+                          decoration: const InputDecoration(
+                              labelText: 'Notes / terms')),
+                      const SizedBox(height: 8),
+                      Align(
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                              'Quotation total: ${total.toStringAsFixed(3)}',
+                              style: const TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.w800)))
+                    ]);
+                  })),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel')),
+            FilledButton(
+                onPressed: customer.isEmpty || items.isEmpty
+                    ? null
+                    : () async {
+                        await AppDatabase.instance.saveQuotation(
+                            customerId: customer,
+                            items: items,
+                            validUntil: valid,
+                            discount: d(discount.text),
+                            deliveryCharge: d(delivery.text),
+                            otherCharge: d(other.text),
+                            notes: notes.text);
+                        if (context.mounted) Navigator.pop(context, true);
+                      },
+                child: const Text('Save Quotation'))
+          ]);
+}
